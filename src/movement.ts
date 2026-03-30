@@ -10,7 +10,12 @@ export interface ControlsState {
   up: boolean
 }
 
+export type Facing = 'left' | 'right'
+
 export interface PlayerState {
+  animationTime: number
+  facing: Facing
+  moving: boolean
   radius: number
   speed: number
   x: number
@@ -32,6 +37,9 @@ export const ROOM_BOUNDS: RoomBounds = {
 }
 
 export const INITIAL_PLAYER_STATE: PlayerState = {
+  animationTime: 0,
+  facing: 'right',
+  moving: false,
   radius: 18,
   speed: 220,
   x: CANVAS_WIDTH / 2,
@@ -59,15 +67,20 @@ export const stepPlayer = (
   const magnitude = Math.hypot(horizontal, vertical)
 
   if (magnitude === 0 || deltaTime <= 0) {
-    return player
+    return { ...player, moving: false }
   }
 
   const normalizedX = horizontal / magnitude
   const normalizedY = vertical / magnitude
   const distance = player.speed * deltaTime
+  const facing: Facing =
+    horizontal < 0 ? 'left' : horizontal > 0 ? 'right' : player.facing
 
   return {
     ...player,
+    animationTime: player.animationTime + deltaTime,
+    facing,
+    moving: true,
     x: clamp(player.x + normalizedX * distance, bounds.minX, bounds.maxX),
     y: clamp(player.y + normalizedY * distance, bounds.minY, bounds.maxY),
   }
