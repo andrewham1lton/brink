@@ -142,54 +142,50 @@ const drawBackdrop = (context: CanvasRenderingContext2D) => {
   context.ellipse(444, 220, 120, 44, -0.08, 0, Math.PI * 2)
   context.fill()
 
-  // === Exit door on right wall ===
-  // Dark hallway behind the door
-  context.fillStyle = '#1a100a'
-  context.fillRect(840, 56, 80, 120)
-
+  // === Exit door on right wall (closed) ===
   // Door frame
   context.fillStyle = '#5a3820'
   context.fillRect(832, 48, 8, 136)   // left frame
   context.fillRect(920, 48, 8, 136)   // right frame
   context.fillRect(832, 48, 96, 8)    // top frame
 
-  // Door (ajar — drawn at an angle to suggest open)
+  // Door (closed — flat against frame)
   context.fillStyle = '#8a6040'
-  context.beginPath()
-  context.moveTo(920, 56)
-  context.lineTo(900, 56)
-  context.lineTo(893, 176)
-  context.lineTo(920, 176)
-  context.closePath()
-  context.fill()
+  context.fillRect(840, 56, 80, 120)
 
-  // Door panel detail
+  // Door panel details
   context.fillStyle = 'rgba(255, 220, 160, 0.08)'
-  context.fillRect(898, 70, 18, 40)
-  context.fillRect(898, 124, 18, 38)
+  context.fillRect(852, 68, 56, 40)
+  context.fillRect(852, 120, 56, 40)
+
+  // Panel inset borders
+  context.strokeStyle = 'rgba(90, 56, 32, 0.4)'
+  context.lineWidth = 1
+  context.strokeRect(852, 68, 56, 40)
+  context.strokeRect(852, 120, 56, 40)
 
   // Doorknob
   context.fillStyle = '#c4a860'
   context.beginPath()
-  context.arc(900, 120, 4, 0, Math.PI * 2)
+  context.arc(852, 116, 4, 0, Math.PI * 2)
   context.fill()
   // Knob highlight
   context.fillStyle = 'rgba(255, 240, 180, 0.4)'
   context.beginPath()
-  context.arc(899, 119, 1.5, 0, Math.PI * 2)
+  context.arc(851, 115, 1.5, 0, Math.PI * 2)
   context.fill()
 
-  // Hallway depth — faint light at the far end
-  context.fillStyle = 'rgba(180, 150, 110, 0.08)'
-  context.fillRect(852, 60, 40, 110)
-
-  // Baseboard break at door
-  context.fillStyle = '#1a100a'
+  // Baseboard continues across door
+  context.fillStyle = '#3f2413'
   context.fillRect(832, 160, 96, 24)
 
-  // Floor threshold
-  context.fillStyle = '#5a3820'
-  context.fillRect(832, 180, 96, 6)
+  // Baseboard highlight
+  context.strokeStyle = 'rgba(255, 220, 160, 0.15)'
+  context.lineWidth = 1
+  context.beginPath()
+  context.moveTo(832, 160)
+  context.lineTo(928, 160)
+  context.stroke()
 
   // === Wall art — small framed painting ===
   context.fillStyle = '#3a2416'
