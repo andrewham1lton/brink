@@ -1,0 +1,26 @@
+{
+  "name": "game",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "e2e": "playwright test",
+    "verify": "./scripts/verify.sh"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@playwright/test": "^1.57.0",
+    "eslint": "^9.39.1",
+    "globals": "^16.5.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.46.1",
+    "vite": "^8.0.1",
+    "vitest": "^4.0.2"
+  }
+}
