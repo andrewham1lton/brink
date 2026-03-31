@@ -1043,6 +1043,285 @@ const drawPlayerBack = (
   context.restore()
 }
 
+// ── Quadruped front view (down / down-left / down-right) — rat facing the camera ──
+const drawPlayerFront = (
+  context: CanvasRenderingContext2D,
+  player: PlayerState,
+  lean: -1 | 0 | 1,
+) => {
+  const cycle = player.moving
+    ? Math.sin(player.animationTime * WALK_CYCLE_SPEED)
+    : 0
+  const bob = player.moving
+    ? Math.abs(Math.sin(player.animationTime * WALK_CYCLE_SPEED * 2)) * 1.5
+    : 0
+  const breath = player.moving ? 0 : idleBreath()
+
+  const stopBounce = stopBounceTimer > 0
+    ? Math.sin(stopBounceTimer * 14) * stopBounceTimer * 6
+    : 0
+
+  context.save()
+  context.translate(player.x, player.y - bob - stopBounce)
+  if (lean === -1) context.scale(-1, 1)
+
+  // ── Tail — peeks out behind the body, curling up ──
+  const tailIdle = player.moving ? 0 : idleTailSway()
+  const tailSway = tailIdle * 0.3
+  context.strokeStyle = '#d4a888'
+  context.lineWidth = 2.5
+  context.lineCap = 'round'
+  context.beginPath()
+  context.moveTo(-4 + tailSway * 0.2, -8)
+  context.bezierCurveTo(
+    -10 + tailSway * 0.5, -16,
+    -8 + tailSway * 0.7 + cycle * 2, -26 + cycle * 3,
+    -4 + tailSway + cycle * 2, -34 + cycle * 3,
+  )
+  context.stroke()
+
+  // ── Back legs (behind body, peeking out to sides) ──
+  const legSwingL = cycle * 5
+  const legSwingR = -cycle * 5
+  context.strokeStyle = '#6a4a2a'
+  context.lineWidth = 5
+  context.lineCap = 'round'
+  context.beginPath()
+  context.moveTo(-12, 0)
+  context.lineTo(-15 + legSwingL, 13)
+  context.stroke()
+  context.beginPath()
+  context.moveTo(12, 0)
+  context.lineTo(15 + legSwingR, 13)
+  context.stroke()
+
+  // Back paws
+  context.fillStyle = '#5a3a1a'
+  context.beginPath()
+  context.ellipse(-15 + legSwingL, 15, 4.5, 2.5, 0, 0, Math.PI * 2)
+  context.fill()
+  context.beginPath()
+  context.ellipse(15 + legSwingR, 15, 4.5, 2.5, 0, 0, Math.PI * 2)
+  context.fill()
+
+  // ── Body — round chest/belly facing camera ──
+  context.fillStyle = '#96744e'
+  context.beginPath()
+  context.ellipse(0, 0 - breath * 0.2, 15, 12 + breath * 0.3, 0, 0, Math.PI * 2)
+  context.fill()
+
+  // Belly patch — lighter, rounder
+  context.fillStyle = '#d4b896'
+  context.beginPath()
+  context.ellipse(0, 2, 10, 8, 0, 0, Math.PI * 2)
+  context.fill()
+
+  // ── Front legs (in front of body) ──
+  const frontLegL = cycle * 6
+  const frontLegR = -cycle * 6
+  context.strokeStyle = '#7a5a34'
+  context.lineWidth = 6
+  context.lineCap = 'round'
+  context.beginPath()
+  context.moveTo(-9, 5)
+  context.lineTo(-10 + frontLegL, 17)
+  context.stroke()
+  context.beginPath()
+  context.moveTo(9, 5)
+  context.lineTo(10 + frontLegR, 17)
+  context.stroke()
+
+  // Front paws
+  context.fillStyle = '#6a4a2a'
+  context.beginPath()
+  context.ellipse(-10 + frontLegL, 19, 5, 3, 0, 0, Math.PI * 2)
+  context.fill()
+  context.beginPath()
+  context.ellipse(10 + frontLegR, 19, 5, 3, 0, 0, Math.PI * 2)
+  context.fill()
+
+  // Toe beans (idle)
+  if (!player.moving) {
+    context.fillStyle = '#f0a8a8'
+    for (const fx of [-10, 10]) {
+      for (let t = -1; t <= 1; t++) {
+        context.beginPath()
+        context.arc(fx + t * 1.8, 18.5, 0.9, 0, Math.PI * 2)
+        context.fill()
+      }
+    }
+  }
+
+  // ── Head — full face, centered ──
+  const headBob = player.moving
+    ? Math.sin(player.animationTime * WALK_CYCLE_SPEED * 2) * 1
+    : 0
+  const headY = -13 - headBob
+  const earBob = player.moving
+    ? Math.sin(sceneTime * WALK_CYCLE_SPEED * 2) * 2
+    : idleEarTwitch()
+  const noseWob = player.moving ? 0 : idleNoseWiggle()
+  const blink = !player.moving && isBlinking()
+  const whiskerSpread = player.moving
+    ? Math.sin(sceneTime * WALK_CYCLE_SPEED) * 1
+    : twitch(sceneTime, 0.7, 0.14) * 2.5
+
+  // Ears (behind head)
+  context.fillStyle = '#7a5a34'
+  context.beginPath()
+  context.arc(-11, headY - 8 - earBob * 0.5, 9, 0, Math.PI * 2)
+  context.fill()
+  context.fillStyle = '#f5aabb'
+  context.beginPath()
+  context.arc(-11, headY - 8 - earBob * 0.5, 6.5, 0, Math.PI * 2)
+  context.fill()
+
+  context.fillStyle = '#7a5a34'
+  context.beginPath()
+  context.arc(11, headY - 8 - earBob, 9, 0, Math.PI * 2)
+  context.fill()
+  context.fillStyle = '#f5aabb'
+  context.beginPath()
+  context.arc(11, headY - 8 - earBob, 6.5, 0, Math.PI * 2)
+  context.fill()
+
+  // Head circle
+  context.fillStyle = '#a8855c'
+  context.beginPath()
+  context.arc(0, headY, 13, 0, Math.PI * 2)
+  context.fill()
+
+  // Cheeks
+  context.fillStyle = '#b89468'
+  context.beginPath()
+  context.ellipse(-8, headY + 4, 5, 4, -0.2, 0, Math.PI * 2)
+  context.fill()
+  context.beginPath()
+  context.ellipse(8, headY + 4, 5, 4, 0.2, 0, Math.PI * 2)
+  context.fill()
+
+  // Snout — centered
+  context.fillStyle = '#c4a07a'
+  context.beginPath()
+  context.ellipse(0, headY + 5 + noseWob, 7, 5, 0, 0, Math.PI * 2)
+  context.fill()
+
+  // Nose — centered, prominent
+  context.fillStyle = '#f08888'
+  context.beginPath()
+  context.arc(0, headY + 3 + noseWob, 3.2, 0, Math.PI * 2)
+  context.fill()
+  context.fillStyle = 'rgba(255, 220, 220, 0.7)'
+  context.beginPath()
+  context.arc(-0.5, headY + 2 + noseWob, 1.2, 0, Math.PI * 2)
+  context.fill()
+
+  // Eyes — both visible, symmetrical
+  if (blink) {
+    context.strokeStyle = '#0d0808'
+    context.lineWidth = 2
+    context.lineCap = 'round'
+    context.beginPath()
+    context.moveTo(-9, headY - 2)
+    context.lineTo(-4, headY - 2)
+    context.stroke()
+    context.beginPath()
+    context.moveTo(4, headY - 2)
+    context.lineTo(9, headY - 2)
+    context.stroke()
+  } else {
+    // Left eye
+    context.fillStyle = '#0d0808'
+    context.beginPath()
+    context.arc(-7, headY - 2, 3.5, 0, Math.PI * 2)
+    context.fill()
+    context.fillStyle = 'rgba(255, 255, 255, 0.85)'
+    context.beginPath()
+    context.arc(-5.8, headY - 3.5, 1.5, 0, Math.PI * 2)
+    context.fill()
+    context.fillStyle = 'rgba(255, 255, 255, 0.5)'
+    context.beginPath()
+    context.arc(-8.2, headY - 0.5, 0.7, 0, Math.PI * 2)
+    context.fill()
+
+    // Right eye
+    context.fillStyle = '#0d0808'
+    context.beginPath()
+    context.arc(7, headY - 2, 3.5, 0, Math.PI * 2)
+    context.fill()
+    context.fillStyle = 'rgba(255, 255, 255, 0.85)'
+    context.beginPath()
+    context.arc(8.2, headY - 3.5, 1.5, 0, Math.PI * 2)
+    context.fill()
+    context.fillStyle = 'rgba(255, 255, 255, 0.5)'
+    context.beginPath()
+    context.arc(5.8, headY - 0.5, 0.7, 0, Math.PI * 2)
+    context.fill()
+  }
+
+  // Whiskers — both sides
+  context.strokeStyle = 'rgba(220, 200, 170, 0.75)'
+  context.lineWidth = 0.9
+  context.lineCap = 'round'
+  // Left whiskers
+  context.beginPath()
+  context.moveTo(-8, headY + 3)
+  context.lineTo(-22, headY + 0 - whiskerSpread)
+  context.moveTo(-8, headY + 4)
+  context.lineTo(-22, headY + 5)
+  context.moveTo(-8, headY + 6)
+  context.lineTo(-22, headY + 10 + whiskerSpread)
+  context.stroke()
+  // Right whiskers
+  context.beginPath()
+  context.moveTo(8, headY + 3)
+  context.lineTo(22, headY + 0 - whiskerSpread)
+  context.moveTo(8, headY + 4)
+  context.lineTo(22, headY + 5)
+  context.moveTo(8, headY + 6)
+  context.lineTo(22, headY + 10 + whiskerSpread)
+  context.stroke()
+
+  // ── Bandana — visible at neck/chest, prominent ──
+  const bandanaFlutter = player.moving
+    ? Math.sin(player.animationTime * WALK_CYCLE_SPEED * 1.5) * 3
+    : Math.sin(sceneTime * 1.2) * 1
+
+  // Scarf wrap
+  context.fillStyle = '#cc3333'
+  context.beginPath()
+  context.arc(0, headY + 12, 7, 0.3, Math.PI - 0.3)
+  context.lineTo(-5, headY + 14)
+  context.closePath()
+  context.fill()
+
+  // Knot
+  context.fillStyle = '#aa2222'
+  context.beginPath()
+  context.arc(0, headY + 14, 2.5, 0, Math.PI * 2)
+  context.fill()
+
+  // Bandana tails hanging down chest
+  context.fillStyle = '#cc3333'
+  context.beginPath()
+  context.moveTo(-2, headY + 15)
+  context.quadraticCurveTo(-5, headY + 22 + bandanaFlutter, -6, headY + 26 + bandanaFlutter)
+  context.lineTo(-3, headY + 24 + bandanaFlutter)
+  context.quadraticCurveTo(-2, headY + 20 + bandanaFlutter * 0.5, 0, headY + 16)
+  context.closePath()
+  context.fill()
+  context.fillStyle = '#bb2828'
+  context.beginPath()
+  context.moveTo(2, headY + 15)
+  context.quadraticCurveTo(4, headY + 21 + bandanaFlutter * 0.8, 5, headY + 25 + bandanaFlutter * 0.7)
+  context.lineTo(3, headY + 23 + bandanaFlutter * 0.7)
+  context.quadraticCurveTo(2, headY + 19 + bandanaFlutter * 0.4, 1, headY + 16)
+  context.closePath()
+  context.fill()
+
+  context.restore()
+}
+
 const drawPlayer = (context: CanvasRenderingContext2D, player: PlayerState) => {
   if (player.facing === 'up') {
     drawPlayerBack(context, player, 0)
@@ -1050,6 +1329,12 @@ const drawPlayer = (context: CanvasRenderingContext2D, player: PlayerState) => {
     drawPlayerBack(context, player, 1)
   } else if (player.facing === 'up-left') {
     drawPlayerBack(context, player, -1)
+  } else if (player.facing === 'down') {
+    drawPlayerFront(context, player, 0)
+  } else if (player.facing === 'down-right') {
+    drawPlayerFront(context, player, 1)
+  } else if (player.facing === 'down-left') {
+    drawPlayerFront(context, player, -1)
   } else {
     drawPlayerSide(context, player)
   }

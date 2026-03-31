@@ -10,7 +10,7 @@ export interface ControlsState {
   up: boolean
 }
 
-export type Facing = 'left' | 'right' | 'up' | 'up-left' | 'up-right'
+export type Facing = 'left' | 'right' | 'up' | 'up-left' | 'up-right' | 'down' | 'down-left' | 'down-right'
 
 export interface PlayerState {
   animationTime: number
@@ -132,15 +132,16 @@ export const stepPlayer = (
     facing = 'up-right'
   } else if (vertical < 0 && horizontal < 0) {
     facing = 'up-left'
+  } else if (vertical > 0 && horizontal < 0) {
+    facing = 'down-left'
+  } else if (vertical > 0 && horizontal > 0) {
+    facing = 'down-right'
+  } else if (vertical > 0 && horizontal === 0) {
+    facing = 'down'
   } else if (horizontal < 0) {
     facing = 'left'
-  } else if (horizontal > 0) {
-    facing = 'right'
   } else {
-    // Moving straight down — resolve to a side facing so the rat turns around
-    facing = player.facing === 'up-left' || player.facing === 'left'
-      ? 'left'
-      : 'right'
+    facing = 'right'
   }
 
   let newX = clamp(player.x + normalizedX * distance, bounds.minX, bounds.maxX)
