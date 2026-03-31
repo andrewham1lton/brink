@@ -875,169 +875,287 @@ const drawPlayerBack = (
 
   // ── Tail — hangs down toward the viewer from the rump ──
   const tailIdle = player.moving ? 0 : idleTailSway()
-  const tailSway = tailIdle * 0.3
+  const tailWalk = player.moving ? cycle * 2 : 0
   context.strokeStyle = '#d4a888'
-  context.lineWidth = 2.5
+  context.lineWidth = 3
   context.lineCap = 'round'
   context.beginPath()
-  context.moveTo(tailSway * 0.2, 8)
+  context.moveTo(tailIdle * 0.15, 8)
   context.bezierCurveTo(
-    tailSway * 0.5 + cycle * 2, 16,
-    2 + tailSway * 0.7, 24 + cycle * 3,
-    tailSway + cycle * 2, 32 + cycle * 3,
+    2 + tailIdle * 0.3 + tailWalk, 14,
+    -2 + tailIdle * 0.5 + tailWalk * 0.5, 22,
+    3 + tailIdle * 0.7 + tailWalk * 0.3, 28,
+  )
+  context.stroke()
+  // Tail tip thinning with gentle curl
+  context.lineWidth = 1.8
+  context.beginPath()
+  context.moveTo(3 + tailIdle * 0.7 + tailWalk * 0.3, 28)
+  context.bezierCurveTo(
+    5 + tailIdle * 0.4, 31,
+    4 + tailIdle * 0.3, 34,
+    2 + tailIdle * 0.2, 36,
   )
   context.stroke()
 
-  // ── Legs — simple symmetrical walk ──
-  const legSwingL = cycle * 6
-  const legSwingR = -cycle * 6
+  // ── Back legs — chunky haunches with 2-segment bend (trot gait) ──
+  // Trot: diagonal pairs — left-back swings with right-front
+  const backLegSwingL = cycle * 5
+  const backLegSwingR = -cycle * 5
 
-  // Back legs (wider, nearer to viewer)
-  context.strokeStyle = '#6a4a2a'
-  context.lineWidth = 6
-  context.lineCap = 'round'
-  context.beginPath()
-  context.moveTo(-8, 5)
-  context.lineTo(-9 + legSwingL, 17)
-  context.stroke()
-  context.beginPath()
-  context.moveTo(8, 5)
-  context.lineTo(9 + legSwingR, 17)
-  context.stroke()
+  // Left back leg (haunch + lower)
+  const drawBackLeg = (side: number, swing: number) => {
+    const hipX = side * 10
+    const kneeX = hipX + side * 2 + swing * 0.5
+    const kneeY = 10 + Math.abs(swing) * 0.3
+    const pawX = kneeX + swing
+    const pawY = 18
 
-  // Back paws
-  context.fillStyle = '#5a3a1a'
-  context.beginPath()
-  context.ellipse(-9 + legSwingL, 19, 5, 3, 0, 0, Math.PI * 2)
-  context.fill()
-  context.beginPath()
-  context.ellipse(9 + legSwingR, 19, 5, 3, 0, 0, Math.PI * 2)
-  context.fill()
+    // Upper leg (thick haunch)
+    context.strokeStyle = '#6a4a2a'
+    context.lineWidth = 7
+    context.lineCap = 'round'
+    context.beginPath()
+    context.moveTo(hipX, 4)
+    context.lineTo(kneeX, kneeY)
+    context.stroke()
 
-  // Toe beans (idle)
-  if (!player.moving) {
-    context.fillStyle = '#f0a8a8'
-    for (const fx of [-9, 9]) {
+    // Lower leg
+    context.lineWidth = 5
+    context.beginPath()
+    context.moveTo(kneeX, kneeY)
+    context.lineTo(pawX, pawY)
+    context.stroke()
+
+    // Paw — round and chunky
+    context.fillStyle = '#5a3a1a'
+    context.beginPath()
+    context.ellipse(pawX, pawY + 1, 5.5, 3, 0, 0, Math.PI * 2)
+    context.fill()
+
+    // Toe beans (idle only)
+    if (!player.moving) {
+      context.fillStyle = '#f0a8a8'
       for (let t = -1; t <= 1; t++) {
         context.beginPath()
-        context.arc(fx + t * 1.8, 18.5, 0.9, 0, Math.PI * 2)
+        context.arc(pawX + t * 2, pawY + 0.5, 1, 0, Math.PI * 2)
         context.fill()
       }
+      // Pad
+      context.beginPath()
+      context.ellipse(pawX, pawY + 2.5, 2, 1.2, 0, 0, Math.PI * 2)
+      context.fill()
     }
   }
 
-  // ── Rump / body — round from behind ──
-  context.fillStyle = '#8a6a44'
-  context.beginPath()
-  context.ellipse(0, 0 - breath * 0.2, 15, 12 + breath * 0.3, 0, 0, Math.PI * 2)
-  context.fill()
+  drawBackLeg(-1, backLegSwingL)
+  drawBackLeg(1, backLegSwingR)
 
-  // Back fur stripe
-  context.fillStyle = 'rgba(60, 36, 14, 0.18)'
+  // ── Rump / body — plump pear shape, wider at haunches ──
+  // Main body as a smooth pear/teardrop: wide rump tapering to shoulders
+  context.fillStyle = '#96744e'
   context.beginPath()
-  context.ellipse(0, -4, 4, 9, 0, 0, Math.PI * 2)
-  context.fill()
-
-  // Front legs (underneath body, slightly ahead of back legs)
-  const frontLegL = -cycle * 6
-  const frontLegR = cycle * 6
-  context.strokeStyle = '#7a5a34'
-  context.lineWidth = 5.5
-  context.lineCap = 'round'
-  context.beginPath()
-  context.moveTo(-6, 2)
-  context.lineTo(-7 + frontLegL, 16)
-  context.stroke()
-  context.beginPath()
-  context.moveTo(6, 2)
-  context.lineTo(7 + frontLegR, 16)
-  context.stroke()
-
-  // Front paws
-  context.fillStyle = '#6a4a2a'
-  context.beginPath()
-  context.ellipse(-7 + frontLegL, 18, 5, 2.5, 0, 0, Math.PI * 2)
-  context.fill()
-  context.beginPath()
-  context.ellipse(7 + frontLegR, 18, 5, 2.5, 0, 0, Math.PI * 2)
-  context.fill()
-
-  // ── Head (back of head) ──
-  const headBob = player.moving
-    ? Math.sin(player.animationTime * WALK_CYCLE_SPEED * 2) * 1
-    : 0
-  const headY = -13 - headBob
-
-  context.fillStyle = '#a8855c'
-  context.beginPath()
-  context.arc(0, headY, 13, 0, Math.PI * 2)
-  context.fill()
-
-  // ── Bandana — small hint at nape, not prominent ──
-  context.fillStyle = '#cc3333'
-  context.beginPath()
-  context.arc(0, headY + 11, 6, 0.4, Math.PI - 0.4)
-  context.lineTo(-4, headY + 12)
+  context.moveTo(0, -14 - breath * 0.2)
+  // Right side: shoulder → haunch
+  context.bezierCurveTo(
+    13 + breath * 0.15, -14, 17 + breath * 0.2, -2, 16 + breath * 0.2, 6,
+  )
+  // Right haunch curve to bottom
+  context.bezierCurveTo(15, 12, 8, 14, 0, 14)
+  // Left haunch curve
+  context.bezierCurveTo(-8, 14, -15, 12, -16 - breath * 0.2, 6)
+  // Left side: haunch → shoulder
+  context.bezierCurveTo(
+    -17 - breath * 0.2, -2, -13 - breath * 0.15, -14, 0, -14 - breath * 0.2,
+  )
   context.closePath()
   context.fill()
 
-  // ── Ears ──
+  // Rump highlight (cute round butt)
+  context.fillStyle = '#a8855c'
+  context.beginPath()
+  context.ellipse(0, 5, 11, 7, 0, 0.3, Math.PI - 0.3)
+  context.fill()
+
+  // Back fur stripe / spine
+  context.fillStyle = 'rgba(60, 36, 14, 0.12)'
+  context.beginPath()
+  context.ellipse(0, -3, 2.5, 13, 0, 0, Math.PI * 2)
+  context.fill()
+
+  // ── Front legs — peeking out from under the body, closer together ──
+  const frontLegSwingL = -cycle * 5
+  const frontLegSwingR = cycle * 5
+
+  const drawFrontLeg = (side: number, swing: number) => {
+    const shoulderX = side * 6
+    const pawX = shoulderX + swing
+    const pawY = 17
+
+    context.strokeStyle = '#7a5a34'
+    context.lineWidth = 5
+    context.lineCap = 'round'
+    context.beginPath()
+    context.moveTo(shoulderX, -2)
+    context.quadraticCurveTo(shoulderX + swing * 0.3, 8, pawX, pawY)
+    context.stroke()
+
+    // Front paw (slightly smaller)
+    context.fillStyle = '#6a4a2a'
+    context.beginPath()
+    context.ellipse(pawX, pawY + 1, 4.5, 2.5, 0, 0, Math.PI * 2)
+    context.fill()
+  }
+
+  drawFrontLeg(-1, frontLegSwingL)
+  drawFrontLeg(1, frontLegSwingR)
+
+  // ── Head (back of head) — slightly oval, showing crown ──
+  const headBob = player.moving
+    ? Math.sin(player.animationTime * WALK_CYCLE_SPEED * 2) * 1
+    : idleNoseWiggle() * 0.3
+  const headY = -16 - headBob
+
+  // Back of head
+  context.fillStyle = '#a8855c'
+  context.beginPath()
+  context.ellipse(0, headY, 12, 11, 0, 0, Math.PI * 2)
+  context.fill()
+
+  // Crown tuft — a little floof between ears
+  context.fillStyle = '#b8956c'
+  context.beginPath()
+  context.ellipse(0, headY - 7, 5, 3, 0, Math.PI, Math.PI * 2)
+  context.fill()
+
+  // ── Bandana — wraps around neck, visible from behind ──
+  context.fillStyle = '#cc3333'
+  context.beginPath()
+  context.moveTo(-10, headY + 9)
+  context.quadraticCurveTo(-12, headY + 13, -8, headY + 15)
+  context.lineTo(8, headY + 15)
+  context.quadraticCurveTo(12, headY + 13, 10, headY + 9)
+  context.quadraticCurveTo(6, headY + 12, 0, headY + 12)
+  context.quadraticCurveTo(-6, headY + 12, -10, headY + 9)
+  context.closePath()
+  context.fill()
+
+  // Bandana knot at nape
+  context.fillStyle = '#aa2222'
+  context.beginPath()
+  context.arc(0, headY + 12, 3, 0, Math.PI * 2)
+  context.fill()
+  context.fillStyle = '#cc3333'
+  context.beginPath()
+  context.arc(0, headY + 12, 1.8, 0, Math.PI * 2)
+  context.fill()
+
+  // Bandana tails hanging from knot (short, cute)
+  const bandanaFlutter = player.moving
+    ? Math.sin(player.animationTime * WALK_CYCLE_SPEED * 1.5) * 2.5
+    : Math.sin(sceneTime * 1.2) * 1
+  context.fillStyle = '#cc3333'
+  context.beginPath()
+  context.moveTo(-1, headY + 14)
+  context.quadraticCurveTo(-3 + bandanaFlutter * 0.3, headY + 19, -5 + bandanaFlutter * 0.5, headY + 23)
+  context.lineTo(-3 + bandanaFlutter * 0.5, headY + 22)
+  context.quadraticCurveTo(-1 + bandanaFlutter * 0.15, headY + 18, 0, headY + 14)
+  context.closePath()
+  context.fill()
+  context.fillStyle = '#bb2828'
+  context.beginPath()
+  context.moveTo(1, headY + 14)
+  context.quadraticCurveTo(3 + bandanaFlutter * 0.2, headY + 18, 4 + bandanaFlutter * 0.4, headY + 22)
+  context.lineTo(3 + bandanaFlutter * 0.4, headY + 21)
+  context.quadraticCurveTo(2 + bandanaFlutter * 0.1, headY + 17, 0, headY + 14)
+  context.closePath()
+  context.fill()
+
+  // ── Ears — large, round, cute ──
   const earBob = player.moving
     ? Math.sin(sceneTime * WALK_CYCLE_SPEED * 2) * 2
     : idleEarTwitch()
 
+  // Left ear
   context.fillStyle = '#7a5a34'
   context.beginPath()
-  context.arc(-11, headY - 8 - earBob * 0.5, 9, 0, Math.PI * 2)
+  context.ellipse(-10, headY - 8 - earBob * 0.5, 8, 9, -0.2, 0, Math.PI * 2)
   context.fill()
   context.fillStyle = '#f5aabb'
   context.beginPath()
-  context.arc(-11, headY - 8 - earBob * 0.5, 6.5, 0, Math.PI * 2)
+  context.ellipse(-10, headY - 8 - earBob * 0.5, 5.5, 6.5, -0.2, 0, Math.PI * 2)
   context.fill()
 
+  // Right ear
   context.fillStyle = '#7a5a34'
   context.beginPath()
-  context.arc(11, headY - 8 - earBob, 9, 0, Math.PI * 2)
+  context.ellipse(10, headY - 8 - earBob, 8, 9, 0.2, 0, Math.PI * 2)
   context.fill()
   context.fillStyle = '#f5aabb'
   context.beginPath()
-  context.arc(11, headY - 8 - earBob, 6.5, 0, Math.PI * 2)
+  context.ellipse(10, headY - 8 - earBob, 5.5, 6.5, 0.2, 0, Math.PI * 2)
   context.fill()
 
-  // For diagonal: hint of near eye and whiskers
+  // ── Snout bump — tiny hint of muzzle poking past top of head ──
+  context.fillStyle = '#b8956c'
+  context.beginPath()
+  context.ellipse(0, headY - 10, 4, 2.5, 0, Math.PI, Math.PI * 2)
+  context.fill()
+
+  // For diagonal: hint of near eye, cheek, and whiskers
   if (lean !== 0) {
+    // Cheek puff
+    context.fillStyle = '#c4a57c'
+    context.beginPath()
+    context.ellipse(11, headY + 3, 5, 4, 0.2, 0, Math.PI * 2)
+    context.fill()
+
     const blink = !player.moving && isBlinking()
     if (blink) {
       context.strokeStyle = '#0d0808'
       context.lineWidth = 2
       context.lineCap = 'round'
       context.beginPath()
-      context.moveTo(8, headY + 1)
-      context.lineTo(13, headY + 1)
+      context.moveTo(9, headY + 1)
+      context.lineTo(14, headY + 1)
       context.stroke()
     } else {
+      // Eye
       context.fillStyle = '#0d0808'
       context.beginPath()
-      context.arc(11, headY + 1, 3, 0, Math.PI * 2)
+      context.ellipse(11, headY + 0.5, 3.5, 3, 0.1, 0, Math.PI * 2)
       context.fill()
-      context.fillStyle = 'rgba(255, 255, 255, 0.8)'
+      // Eye highlight
+      context.fillStyle = 'rgba(255, 255, 255, 0.85)'
       context.beginPath()
-      context.arc(12, headY, 1.2, 0, Math.PI * 2)
+      context.arc(12.5, headY - 0.5, 1.3, 0, Math.PI * 2)
+      context.fill()
+      context.beginPath()
+      context.arc(10, headY + 1.5, 0.6, 0, Math.PI * 2)
       context.fill()
     }
 
+    // Whiskers
     const whiskerSpread = player.moving
-      ? Math.sin(sceneTime * WALK_CYCLE_SPEED) * 1
-      : twitch(sceneTime, 0.7, 0.14) * 2
-    context.strokeStyle = 'rgba(220, 200, 170, 0.5)'
+      ? Math.sin(sceneTime * WALK_CYCLE_SPEED) * 1.5
+      : twitch(sceneTime, 0.7, 0.14) * 2.5
+    context.strokeStyle = 'rgba(220, 200, 170, 0.55)'
     context.lineWidth = 0.8
     context.lineCap = 'round'
     context.beginPath()
-    context.moveTo(15, headY + 3)
-    context.lineTo(26, headY + 6 + whiskerSpread)
+    context.moveTo(15, headY + 4)
+    context.lineTo(27, headY + 7 + whiskerSpread)
     context.moveTo(15, headY + 2)
-    context.lineTo(26, headY - 2 - whiskerSpread)
+    context.lineTo(27, headY - 1 - whiskerSpread)
+    context.moveTo(14, headY + 3)
+    context.lineTo(26, headY + 3)
     context.stroke()
+
+    // Hint of nose on the side
+    context.fillStyle = '#f08888'
+    context.beginPath()
+    context.ellipse(14, headY - 5, 2, 1.5, 0.3, 0, Math.PI * 2)
+    context.fill()
   }
 
   context.restore()
