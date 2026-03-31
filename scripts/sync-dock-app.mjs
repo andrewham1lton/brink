@@ -1,6 +1,5 @@
 import { spawnSync } from 'node:child_process'
 import {
-  cpSync,
   existsSync,
   mkdirSync,
   readdirSync,
@@ -15,7 +14,14 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 const dockBuildRoot = path.join(repoRoot, 'artifacts', 'dock-build')
 const releaseRoot = path.join(repoRoot, 'artifacts', 'release')
 const dockApplicationsDir = path.join(os.homedir(), 'Applications')
-const dockAppPath = path.join(dockApplicationsDir, 'Guy In A Room Dev.app')
+const dockPlistPath = path.join(
+  os.homedir(),
+  'Library',
+  'Preferences',
+  'com.apple.dock.plist',
+)
+const dockAppPath = path.join(dockApplicationsDir, 'Brink.app')
+const legacyDockAppPath = path.join(dockApplicationsDir, 'Guy In A Room Dev.app')
 
 const args = new Set(process.argv.slice(2))
 const shouldOpen = args.has('--open')
@@ -37,17 +43,21 @@ const run = (command, commandArgs) => {
   }
 }
 
-const runJson = (command, commandArgs) => {
-  const result = spawnSync(command, commandArgs, {
-    cwd: repoRoot,
-    encoding: 'utf8',
-  })
+const readDockEntryUrl = (index) => {
+  const result = spawnSync(
+    '/usr/libexec/PlistBuddy',
+    ['-c', `Print :persistent-apps:${index}:tile-data:file-data:_CFURLString`, dockPlistPath],
+    {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    },
+  )
 
   if (result.status !== 0) {
-    process.exit(result.status ?? 1)
+    return null
   }
 
-  return result.stdout
+  return result.stdout.trim()
 }
 
 const findAppBundle = (rootDir) => {
@@ -74,11 +84,43 @@ const findAppBundle = (rootDir) => {
 
 const ensureDockPinned = () => {
   const dockAppUrl = `${pathToFileURL(dockAppPath).href}/`
-  const persistentApps = runJson('defaults', ['read', 'com.apple.dock', 'persistent-apps'])
+  const legacyDockAppUrl = `${pathToFileURL(legacyDockAppPath).href}/`
+  const matchingIndexes = []
+  let currentEntryCount = 0
+  let legacyEntryCount = 0
 
-  if (persistentApps.includes(dockAppUrl)) {
+  for (let index = 0; index < 200; index += 1) {
+    const entryUrl = readDockEntryUrl(index)
+
+    if (!entryUrl) {
+      continue
+    }
+
+    if (entryUrl === dockAppUrl) {
+      currentEntryCount += 1
+      matchingIndexes.push(index)
+      continue
+    }
+
+    if (entryUrl === legacyDockAppUrl) {
+      legacyEntryCount += 1
+      matchingIndexes.push(index)
+    }
+  }
+
+  if (currentEntryCount === 1 && legacyEntryCount === 0) {
     console.log(`Dock app already pinned at ${dockAppPath}`)
     return
+  }
+
+  if (matchingIndexes.length > 0) {
+    for (const index of matchingIndexes.toReversed()) {
+      run('/usr/libexec/PlistBuddy', [
+        '-c',
+        `Delete :persistent-apps:${index}`,
+        dockPlistPath,
+      ])
+    }
   }
 
   const dockTile = [
@@ -93,7 +135,7 @@ const ensureDockPinned = () => {
     '<integer>15</integer>',
     '</dict>',
     '<key>file-label</key>',
-    '<string>Guy In A Room Dev</string>',
+    '<string>Brink</string>',
     '</dict>',
     '<key>tile-type</key>',
     '<string>file-tile</string>',
@@ -150,8 +192,9 @@ if (!appBundleStats.isDirectory()) {
 }
 
 mkdirSync(dockApplicationsDir, { recursive: true })
+rmSync(legacyDockAppPath, { force: true, recursive: true })
 rmSync(dockAppPath, { force: true, recursive: true })
-cpSync(appBundlePath, dockAppPath, { recursive: true })
+run('ditto', [appBundlePath, dockAppPath])
 
 console.log(`Updated Dock app at ${dockAppPath}`)
 ensureDockPinned()

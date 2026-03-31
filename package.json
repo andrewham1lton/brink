@@ -1,5 +1,5 @@
 {
-  "name": "game",
+  "name": "brink",
   "private": true,
   "version": "0.0.0",
   "description": "A desktop room exploration prototype built with Electron and Vite.",
@@ -38,7 +38,7 @@
     "vitest": "^4.0.2"
   },
   "build": {
-    "appId": "com.andrewhamilton.guyinaroom",
+    "appId": "com.andrewhamilton.brink",
     "asar": true,
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "directories": {
@@ -61,7 +61,7 @@
       "oneClick": true,
       "perMachine": false
     },
-    "productName": "Guy In A Room",
+    "productName": "Brink",
     "win": {
       "target": [
         "nsis",

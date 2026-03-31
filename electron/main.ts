@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 
 import { app, BrowserWindow, shell } from 'electron'
 
-const APP_NAME = 'Guy In A Room'
+const APP_NAME = 'Brink'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const createMainWindow = async () => {

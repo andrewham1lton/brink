@@ -28,5 +28,5 @@
 ## Desktop App Notes
 
 - The app runtime is Electron-first. Treat the browser renderer as an implementation detail, not the shipped product.
-- On macOS, keep `~/Applications/Guy In A Room Dev.app` refreshed with `npm run dock:sync` after app code changes so the pinned Dock app always launches the latest build.
+- On macOS, keep `~/Applications/Brink.app` refreshed with `npm run dock:sync` after app code changes so the pinned Dock app always launches the latest build.
 - Use `npm run dist:mac` for macOS beta bundles and `npm run dist:win` for Windows beta bundles. The repo also includes a GitHub workflow for building both platforms from one manual trigger.
