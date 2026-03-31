@@ -948,6 +948,33 @@ const drawPlayerBack = (
     }
   }
 
+  // ── Front legs — drawn first (farther from viewer, peeking past head side) ──
+  const frontLegSwingL = -cycle * 5
+  const frontLegSwingR = cycle * 5
+
+  const drawFrontLeg = (side: number, swing: number) => {
+    const shoulderX = side * 5
+    const pawX = shoulderX + swing
+    const pawY = -10
+
+    context.strokeStyle = '#7a5a34'
+    context.lineWidth = 4.5
+    context.lineCap = 'round'
+    context.beginPath()
+    context.moveTo(shoulderX, -8)
+    context.quadraticCurveTo(shoulderX + side * 2 + swing * 0.3, -4, pawX + side * 3, pawY)
+    context.stroke()
+
+    // Front paw (smaller, farther away)
+    context.fillStyle = '#6a4a2a'
+    context.beginPath()
+    context.ellipse(pawX + side * 3, pawY, 4, 2.2, 0, 0, Math.PI * 2)
+    context.fill()
+  }
+
+  drawFrontLeg(-1, frontLegSwingL)
+  drawFrontLeg(1, frontLegSwingR)
+
   drawBackLeg(-1, backLegSwingL)
   drawBackLeg(1, backLegSwingR)
 
@@ -982,30 +1009,6 @@ const drawPlayerBack = (
   context.beginPath()
   context.ellipse(0, -3, 2.5, 13, 0, 0, Math.PI * 2)
   context.fill()
-
-  // ── Front legs — peeking out from under the body, closer together ──
-  const frontLegSwingL = -cycle * 5
-  const frontLegSwingR = cycle * 5
-
-  const drawFrontLeg = (side: number, swing: number) => {
-    const shoulderX = side * 6
-    const pawX = shoulderX + swing
-    const pawY = 17
-
-    context.strokeStyle = '#7a5a34'
-    context.lineWidth = 5
-    context.lineCap = 'round'
-    context.beginPath()
-    context.moveTo(shoulderX, -2)
-    context.quadraticCurveTo(shoulderX + swing * 0.3, 8, pawX, pawY)
-    context.stroke()
-
-    // Front paw (slightly smaller)
-    context.fillStyle = '#6a4a2a'
-    context.beginPath()
-    context.ellipse(pawX, pawY + 1, 4.5, 2.5, 0, 0, Math.PI * 2)
-    context.fill()
-  }
 
   drawFrontLeg(-1, frontLegSwingL)
   drawFrontLeg(1, frontLegSwingR)
