@@ -425,19 +425,6 @@ const drawFurniture = (context: CanvasRenderingContext2D) => {
   context.fillStyle = 'rgba(255, 220, 160, 0.1)'
   context.fillRect(236, 222, 68, 3)
 
-  // Alarm clock on nightstand
-  context.fillStyle = '#2a2a30'
-  context.beginPath()
-  context.roundRect(258, 210, 24, 16, 4)
-  context.fill()
-  // Clock face
-  context.fillStyle = '#4a8a5a'
-  context.fillRect(262, 213, 16, 10)
-  // Time display
-  context.fillStyle = '#7aff7a'
-  context.font = '7px monospace'
-  context.fillText('7:42', 263, 221)
-
   // === Lamp (on bookshelf) ===
   // Warm glow halo
   context.save()
@@ -516,19 +503,105 @@ const drawFurniture = (context: CanvasRenderingContext2D) => {
   context.fill()
 }
 
+const drawAlarmClock = (context: CanvasRenderingContext2D) => {
+  context.fillStyle = '#2a2a30'
+  context.beginPath()
+  context.roundRect(258, 210, 24, 16, 4)
+  context.fill()
+  // Clock face
+  context.fillStyle = '#4a8a5a'
+  context.fillRect(262, 213, 16, 10)
+  // Time display
+  context.fillStyle = '#7aff7a'
+  context.font = '7px monospace'
+  context.fillText('7:42', 263, 221)
+}
+
 const drawPlayerShadow = (
   context: CanvasRenderingContext2D,
   player: PlayerState,
 ) => {
-  context.fillStyle = 'rgba(20, 12, 8, 0.42)'
+  context.fillStyle = 'rgba(20, 12, 8, 0.38)'
   context.beginPath()
-  context.ellipse(player.x, player.y + 26, 20, 11, 0, 0, Math.PI * 2)
+  context.ellipse(player.x, player.y + 26, 18, 8, 0, 0, Math.PI * 2)
   context.fill()
 }
 
 const WALK_CYCLE_SPEED = 10
 
-const drawPlayer = (context: CanvasRenderingContext2D, player: PlayerState) => {
+// Shared rat head parts for the side-facing view
+const drawRatHeadSide = (context: CanvasRenderingContext2D) => {
+  // Ear (back)
+  context.fillStyle = '#7a5a34'
+  context.beginPath()
+  context.arc(-3, -35, 8, 0, Math.PI * 2)
+  context.fill()
+  context.fillStyle = '#f0a0b0'
+  context.beginPath()
+  context.arc(-3, -35, 5.5, 0, Math.PI * 2)
+  context.fill()
+
+  // Ear (front)
+  context.fillStyle = '#7a5a34'
+  context.beginPath()
+  context.arc(6, -37, 7, 0, Math.PI * 2)
+  context.fill()
+  context.fillStyle = '#f0a0b0'
+  context.beginPath()
+  context.arc(6, -37, 4.5, 0, Math.PI * 2)
+  context.fill()
+
+  // Head
+  context.fillStyle = '#9a7a54'
+  context.beginPath()
+  context.ellipse(4, -26, 12, 11, 0.1, 0, Math.PI * 2)
+  context.fill()
+
+  // Snout
+  context.fillStyle = '#b09070'
+  context.beginPath()
+  context.ellipse(15, -22, 7, 5, -0.1, 0, Math.PI * 2)
+  context.fill()
+
+  // Nose
+  context.fillStyle = '#e87878'
+  context.beginPath()
+  context.arc(21, -22, 2.5, 0, Math.PI * 2)
+  context.fill()
+  context.fillStyle = 'rgba(255, 210, 210, 0.6)'
+  context.beginPath()
+  context.arc(20, -23, 0.9, 0, Math.PI * 2)
+  context.fill()
+
+  // Eye
+  context.fillStyle = '#0d0808'
+  context.beginPath()
+  context.arc(10, -28, 3.2, 0, Math.PI * 2)
+  context.fill()
+  context.fillStyle = 'rgba(255, 255, 255, 0.75)'
+  context.beginPath()
+  context.arc(11, -29, 1.1, 0, Math.PI * 2)
+  context.fill()
+
+  // Whiskers
+  context.strokeStyle = 'rgba(220, 200, 170, 0.75)'
+  context.lineWidth = 0.9
+  context.lineCap = 'round'
+  context.beginPath()
+  context.moveTo(14, -24)
+  context.lineTo(28, -28)
+  context.moveTo(14, -23)
+  context.lineTo(28, -22)
+  context.moveTo(14, -21)
+  context.lineTo(28, -17)
+  context.stroke()
+}
+
+// Side-facing humanoid rat (left / right)
+const drawPlayerSide = (
+  context: CanvasRenderingContext2D,
+  player: PlayerState,
+) => {
   const cycle = player.moving
     ? Math.sin(player.animationTime * WALK_CYCLE_SPEED)
     : 0
@@ -541,95 +614,230 @@ const drawPlayer = (context: CanvasRenderingContext2D, player: PlayerState) => {
   context.translate(player.x, player.y - bob)
   context.scale(flip, 1)
 
-  // Legs
-  const legSwing = cycle * 8
-  context.strokeStyle = '#1f1721'
+  // Tail — behind body, swings with walk
+  context.strokeStyle = '#c49a7a'
+  context.lineWidth = 2.5
   context.lineCap = 'round'
-  context.lineWidth = 6
   context.beginPath()
-  context.moveTo(-7, 18)
-  context.lineTo(-7 + legSwing, 32)
-  context.moveTo(7, 18)
-  context.lineTo(7 - legSwing, 32)
+  context.moveTo(-10, -4)
+  context.bezierCurveTo(-28, 0, -34, -10 + cycle * 4, -26, -20 + cycle * 5)
   context.stroke()
 
-  // Shoes
-  context.fillStyle = '#2a1a12'
+  // Legs
+  const legSwing = cycle * 10
+  context.strokeStyle = '#6a4a2a'
+  context.lineWidth = 7
+  context.lineCap = 'round'
   context.beginPath()
-  context.ellipse(-7 + legSwing, 34, 5, 3, 0, 0, Math.PI * 2)
+  context.moveTo(-6, 6)
+  context.lineTo(-6 + legSwing, 22)
+  context.moveTo(6, 6)
+  context.lineTo(6 - legSwing, 22)
+  context.stroke()
+
+  // Feet
+  context.fillStyle = '#5a3a1a'
+  context.beginPath()
+  context.ellipse(-6 + legSwing, 25, 6, 3.5, 0.2, 0, Math.PI * 2)
   context.fill()
   context.beginPath()
-  context.ellipse(7 - legSwing, 34, 5, 3, 0, 0, Math.PI * 2)
+  context.ellipse(6 - legSwing, 25, 6, 3.5, -0.2, 0, Math.PI * 2)
   context.fill()
 
   // Torso
-  context.fillStyle = '#1d3b73'
+  context.fillStyle = '#8a6a44'
   context.beginPath()
-  context.roundRect(-16, -12, 32, 34, 10)
+  context.roundRect(-13, -14, 26, 22, 8)
   context.fill()
 
-  // Torso highlight
-  context.fillStyle = 'rgba(255, 255, 255, 0.06)'
+  // Belly patch
+  context.fillStyle = '#c8a882'
   context.beginPath()
-  context.roundRect(-14, -10, 12, 30, 8)
-  context.fill()
-
-  // Collar / upper body
-  context.fillStyle = '#345ea5'
-  context.beginPath()
-  context.roundRect(-10, -18, 20, 16, 6)
+  context.roundRect(-7, -10, 14, 16, 6)
   context.fill()
 
   // Arms
-  const armSwing = cycle * 12
-  context.strokeStyle = '#1f1721'
-  context.lineCap = 'round'
+  const armSwing = cycle * 10
+  context.strokeStyle = '#7a5a34'
   context.lineWidth = 6
+  context.lineCap = 'round'
   context.beginPath()
-  context.moveTo(-18, -2)
-  context.lineTo(-28, 10 - armSwing)
-  context.moveTo(18, -2)
-  context.lineTo(28, 10 + armSwing)
+  context.moveTo(-14, -8)
+  context.lineTo(-22, 4 - armSwing)
+  context.moveTo(14, -8)
+  context.lineTo(22, 4 + armSwing)
   context.stroke()
 
   // Hands
-  context.fillStyle = '#f0c9a0'
+  context.fillStyle = '#c8a882'
   context.beginPath()
-  context.arc(-28, 10 - armSwing, 3.5, 0, Math.PI * 2)
+  context.arc(-22, 4 - armSwing, 4, 0, Math.PI * 2)
   context.fill()
   context.beginPath()
-  context.arc(28, 10 + armSwing, 3.5, 0, Math.PI * 2)
-  context.fill()
-
-  // Head
-  context.fillStyle = '#f0c9a0'
-  context.beginPath()
-  context.arc(0, -24, 14, 0, Math.PI * 2)
+  context.arc(22, 4 + armSwing, 4, 0, Math.PI * 2)
   context.fill()
 
-  // Hair
-  context.fillStyle = '#2a1b14'
-  context.beginPath()
-  context.arc(0, -30, 14, Math.PI, Math.PI * 2)
-  context.fill()
-
-  // Eyes
-  context.fillStyle = '#1f1721'
-  context.beginPath()
-  context.arc(5, -25, 2, 0, Math.PI * 2)
-  context.arc(-1, -25, 1.5, 0, Math.PI * 2)
-  context.fill()
-
-  // Mouth
-  context.strokeStyle = 'rgba(80, 40, 30, 0.5)'
-  context.lineWidth = 1.5
-  context.lineCap = 'round'
-  context.beginPath()
-  context.arc(3, -19, 3, 0.2, Math.PI - 0.2)
-  context.stroke()
+  // Rat head (side view)
+  drawRatHeadSide(context)
 
   context.restore()
 }
+
+// Back-facing humanoid rat (up / up-left / up-right)
+const drawPlayerBack = (
+  context: CanvasRenderingContext2D,
+  player: PlayerState,
+  lean: -1 | 0 | 1,
+) => {
+  const cycle = player.moving
+    ? Math.sin(player.animationTime * WALK_CYCLE_SPEED)
+    : 0
+  const bob = player.moving
+    ? Math.abs(Math.sin(player.animationTime * WALK_CYCLE_SPEED * 2)) * 2
+    : 0
+
+  context.save()
+  context.translate(player.x, player.y - bob)
+  // Mirror the whole sprite for up-left
+  if (lean === -1) context.scale(-1, 1)
+
+  const diagonal = lean !== 0
+
+  // Tail — hangs from base of spine, curls to the side
+  context.strokeStyle = '#c49a7a'
+  context.lineWidth = 2.5
+  context.lineCap = 'round'
+  context.beginPath()
+  context.moveTo(diagonal ? 4 : 0, 2)
+  if (diagonal) {
+    context.bezierCurveTo(20, 8, 28, 0, 22, -10)
+  } else {
+    context.bezierCurveTo(-18, 8, -26, 0, -20, -10)
+  }
+  context.stroke()
+
+  // Legs
+  const legSwing = cycle * 10
+  context.strokeStyle = '#6a4a2a'
+  context.lineWidth = 7
+  context.lineCap = 'round'
+  context.beginPath()
+  context.moveTo(-6, 6)
+  context.lineTo(-6 + legSwing, 22)
+  context.moveTo(6, 6)
+  context.lineTo(6 - legSwing, 22)
+  context.stroke()
+
+  // Feet
+  context.fillStyle = '#5a3a1a'
+  context.beginPath()
+  context.ellipse(-6 + legSwing, 25, 6, 3.5, 0.2, 0, Math.PI * 2)
+  context.fill()
+  context.beginPath()
+  context.ellipse(6 - legSwing, 25, 6, 3.5, -0.2, 0, Math.PI * 2)
+  context.fill()
+
+  // Torso (back — slightly darker, no belly patch)
+  context.fillStyle = '#7a5a38'
+  context.beginPath()
+  context.roundRect(-13, -14, 26, 22, 8)
+  context.fill()
+
+  // Back fur stripe
+  context.fillStyle = 'rgba(50, 32, 12, 0.18)'
+  context.beginPath()
+  context.roundRect(-5, -12, 10, 18, 4)
+  context.fill()
+
+  // Arms
+  const armSwing = cycle * 10
+  context.strokeStyle = '#7a5a34'
+  context.lineWidth = 6
+  context.lineCap = 'round'
+  context.beginPath()
+  context.moveTo(-14, -8)
+  context.lineTo(-22, 4 - armSwing)
+  context.moveTo(14, -8)
+  context.lineTo(22, 4 + armSwing)
+  context.stroke()
+
+  // Hands
+  context.fillStyle = '#c8a882'
+  context.beginPath()
+  context.arc(-22, 4 - armSwing, 4, 0, Math.PI * 2)
+  context.fill()
+  context.beginPath()
+  context.arc(22, 4 + armSwing, 4, 0, Math.PI * 2)
+  context.fill()
+
+  // Head (back of head)
+  const headX = diagonal ? 3 : 0
+  context.fillStyle = '#9a7a54'
+  context.beginPath()
+  context.arc(headX, -26, 12, 0, Math.PI * 2)
+  context.fill()
+
+  // Left ear (from behind)
+  context.fillStyle = '#7a5a34'
+  context.beginPath()
+  context.arc(headX - 10, -36, 8, 0, Math.PI * 2)
+  context.fill()
+  context.fillStyle = '#f0a0b0'
+  context.beginPath()
+  context.arc(headX - 10, -36, 5.5, 0, Math.PI * 2)
+  context.fill()
+
+  // Right ear (from behind)
+  context.fillStyle = '#7a5a34'
+  context.beginPath()
+  context.arc(headX + 10, -36, 8, 0, Math.PI * 2)
+  context.fill()
+  context.fillStyle = '#f0a0b0'
+  context.beginPath()
+  context.arc(headX + 10, -36, 5.5, 0, Math.PI * 2)
+  context.fill()
+
+  // For diagonal: hint of near eye and whiskers peeking around the cheek
+  if (diagonal) {
+    context.fillStyle = '#0d0808'
+    context.beginPath()
+    context.arc(headX + 10, -24, 2.5, 0, Math.PI * 2)
+    context.fill()
+    context.fillStyle = 'rgba(255, 255, 255, 0.7)'
+    context.beginPath()
+    context.arc(headX + 11, -25, 0.8, 0, Math.PI * 2)
+    context.fill()
+
+    context.strokeStyle = 'rgba(220, 200, 170, 0.5)'
+    context.lineWidth = 0.8
+    context.lineCap = 'round'
+    context.beginPath()
+    context.moveTo(headX + 14, -22)
+    context.lineTo(headX + 24, -19)
+    context.moveTo(headX + 14, -21)
+    context.lineTo(headX + 24, -25)
+    context.stroke()
+  }
+
+  context.restore()
+}
+
+const drawPlayer = (context: CanvasRenderingContext2D, player: PlayerState) => {
+  if (player.facing === 'up') {
+    drawPlayerBack(context, player, 0)
+  } else if (player.facing === 'up-right') {
+    drawPlayerBack(context, player, 1)
+  } else if (player.facing === 'up-left') {
+    drawPlayerBack(context, player, -1)
+  } else {
+    drawPlayerSide(context, player)
+  }
+}
+
+// Y threshold below which the alarm clock should render on top of the player.
+// The alarm clock sits on the nightstand surface at y≈226; anything above that
+// (lower Y) means the player is standing behind the clock.
+const ALARM_CLOCK_DEPTH_Y = 228
 
 export const renderScene = (
   context: CanvasRenderingContext2D,
@@ -640,6 +848,17 @@ export const renderScene = (
   drawBackdrop(context)
   drawRug(context)
   drawFurniture(context)
+
+  const playerBehindClock = player.y < ALARM_CLOCK_DEPTH_Y
+
+  if (!playerBehindClock) {
+    drawAlarmClock(context)
+  }
+
   drawPlayerShadow(context, player)
   drawPlayer(context, player)
+
+  if (playerBehindClock) {
+    drawAlarmClock(context)
+  }
 }
