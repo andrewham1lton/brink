@@ -938,28 +938,28 @@ const drawPlayerBack = (
   context.ellipse(0, -4, 4, 9, 0, 0, Math.PI * 2)
   context.fill()
 
-  // Front legs (peeking out to sides of body)
-  const frontLegL = -cycle * 5
-  const frontLegR = cycle * 5
+  // Front legs (underneath body, slightly ahead of back legs)
+  const frontLegL = -cycle * 6
+  const frontLegR = cycle * 6
   context.strokeStyle = '#7a5a34'
-  context.lineWidth = 5
+  context.lineWidth = 5.5
   context.lineCap = 'round'
   context.beginPath()
-  context.moveTo(-13, -2)
-  context.lineTo(-15 + frontLegL, 13)
+  context.moveTo(-6, 2)
+  context.lineTo(-7 + frontLegL, 16)
   context.stroke()
   context.beginPath()
-  context.moveTo(13, -2)
-  context.lineTo(15 + frontLegR, 13)
+  context.moveTo(6, 2)
+  context.lineTo(7 + frontLegR, 16)
   context.stroke()
 
   // Front paws
   context.fillStyle = '#6a4a2a'
   context.beginPath()
-  context.ellipse(-15 + frontLegL, 15, 4.5, 2.5, 0, 0, Math.PI * 2)
+  context.ellipse(-7 + frontLegL, 18, 5, 2.5, 0, 0, Math.PI * 2)
   context.fill()
   context.beginPath()
-  context.ellipse(15 + frontLegR, 15, 4.5, 2.5, 0, 0, Math.PI * 2)
+  context.ellipse(7 + frontLegR, 18, 5, 2.5, 0, 0, Math.PI * 2)
   context.fill()
 
   // ── Head (back of head) ──
