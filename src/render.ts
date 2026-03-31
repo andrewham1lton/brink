@@ -553,96 +553,106 @@ const isBlinking = (): boolean => {
   return phase < 0.045
 }
 
-// Shared rat head parts for the side-facing view
+// ── Quadruped rat head (side view) — cuter, bigger proportions ──
 const drawRatHeadSide = (context: CanvasRenderingContext2D, moving: boolean) => {
   const earBob = moving
-    ? Math.sin(sceneTime * WALK_CYCLE_SPEED * 2) * 2  // bounce with steps
+    ? Math.sin(sceneTime * WALK_CYCLE_SPEED * 2) * 2
     : idleEarTwitch()
   const noseWob = moving ? 0 : idleNoseWiggle()
   const blink = !moving && isBlinking()
-  // Whiskers spread outward slightly when sniffing (idle)
   const whiskerSpread = moving
     ? Math.sin(sceneTime * WALK_CYCLE_SPEED) * 1
     : twitch(sceneTime, 0.7, 0.14) * 2.5
 
-  // Ear (back)
+  // Ear (back — far side)
   context.fillStyle = '#7a5a34'
   context.beginPath()
-  context.arc(-3, -35 - earBob * 0.5, 8, 0, Math.PI * 2)
+  context.arc(-4, -12 - earBob * 0.5, 9, 0, Math.PI * 2)
   context.fill()
-  context.fillStyle = '#f0a0b0'
+  context.fillStyle = '#f5aabb'
   context.beginPath()
-  context.arc(-3, -35 - earBob * 0.5, 5.5, 0, Math.PI * 2)
+  context.arc(-4, -12 - earBob * 0.5, 6.5, 0, Math.PI * 2)
   context.fill()
 
-  // Ear (front)
+  // Ear (front — near side)
   context.fillStyle = '#7a5a34'
   context.beginPath()
-  context.arc(6, -37 - earBob, 7, 0, Math.PI * 2)
+  context.arc(5, -14 - earBob, 8, 0, Math.PI * 2)
   context.fill()
-  context.fillStyle = '#f0a0b0'
+  context.fillStyle = '#f5aabb'
   context.beginPath()
-  context.arc(6, -37 - earBob, 4.5, 0, Math.PI * 2)
+  context.arc(5, -14 - earBob, 5.5, 0, Math.PI * 2)
   context.fill()
 
-  // Head
-  context.fillStyle = '#9a7a54'
+  // Head — bigger, rounder
+  context.fillStyle = '#a8855c'
   context.beginPath()
-  context.ellipse(4, -26, 12, 11, 0.1, 0, Math.PI * 2)
+  context.ellipse(4, -2, 14, 13, 0.1, 0, Math.PI * 2)
   context.fill()
 
-  // Snout
-  context.fillStyle = '#b09070'
+  // Cheek puff
+  context.fillStyle = '#b89468'
   context.beginPath()
-  context.ellipse(15, -22 + noseWob, 7, 5, -0.1, 0, Math.PI * 2)
+  context.ellipse(10, 2, 6, 5, 0, 0, Math.PI * 2)
   context.fill()
 
-  // Nose — wiggles up/down when idle
-  context.fillStyle = '#e87878'
+  // Snout — rounder, cuter
+  context.fillStyle = '#c4a07a'
   context.beginPath()
-  context.arc(21, -22 + noseWob, 2.5, 0, Math.PI * 2)
-  context.fill()
-  context.fillStyle = 'rgba(255, 210, 210, 0.6)'
-  context.beginPath()
-  context.arc(20, -23 + noseWob, 0.9, 0, Math.PI * 2)
+  context.ellipse(16, 1 + noseWob, 8, 6, -0.1, 0, Math.PI * 2)
   context.fill()
 
-  // Eye — blinks when idle
+  // Nose — bigger, pinker
+  context.fillStyle = '#f08888'
+  context.beginPath()
+  context.arc(23, 0 + noseWob, 3, 0, Math.PI * 2)
+  context.fill()
+  context.fillStyle = 'rgba(255, 220, 220, 0.7)'
+  context.beginPath()
+  context.arc(22, -1 + noseWob, 1.2, 0, Math.PI * 2)
+  context.fill()
+
+  // Eye — bigger with larger highlight
   if (blink) {
-    // Closed eye — cute little line
     context.strokeStyle = '#0d0808'
-    context.lineWidth = 1.8
+    context.lineWidth = 2
     context.lineCap = 'round'
     context.beginPath()
-    context.moveTo(7, -28)
-    context.lineTo(13, -28)
+    context.moveTo(5, -5)
+    context.lineTo(12, -5)
     context.stroke()
   } else {
     context.fillStyle = '#0d0808'
     context.beginPath()
-    context.arc(10, -28, 3.2, 0, Math.PI * 2)
+    context.arc(9, -5, 4, 0, Math.PI * 2)
     context.fill()
-    context.fillStyle = 'rgba(255, 255, 255, 0.75)'
+    // Large shine
+    context.fillStyle = 'rgba(255, 255, 255, 0.85)'
     context.beginPath()
-    context.arc(11, -29, 1.1, 0, Math.PI * 2)
+    context.arc(10.5, -6.5, 1.6, 0, Math.PI * 2)
+    context.fill()
+    // Small secondary shine
+    context.fillStyle = 'rgba(255, 255, 255, 0.5)'
+    context.beginPath()
+    context.arc(7.5, -3.5, 0.8, 0, Math.PI * 2)
     context.fill()
   }
 
-  // Whiskers — flutter when sniffing, sway when walking
+  // Whiskers
   context.strokeStyle = 'rgba(220, 200, 170, 0.75)'
   context.lineWidth = 0.9
   context.lineCap = 'round'
   context.beginPath()
-  context.moveTo(14, -24)
-  context.lineTo(28, -28 - whiskerSpread)
-  context.moveTo(14, -23)
-  context.lineTo(28, -22)
-  context.moveTo(14, -21)
-  context.lineTo(28, -17 + whiskerSpread)
+  context.moveTo(16, -1)
+  context.lineTo(32, -5 - whiskerSpread)
+  context.moveTo(16, 0)
+  context.lineTo(32, 1)
+  context.moveTo(16, 2)
+  context.lineTo(32, 6 + whiskerSpread)
   context.stroke()
 }
 
-// Side-facing humanoid rat (left / right)
+// ── Quadruped side view (left / right / down) — rat on all 4s ──
 const drawPlayerSide = (
   context: CanvasRenderingContext2D,
   player: PlayerState,
@@ -651,16 +661,14 @@ const drawPlayerSide = (
     ? Math.sin(player.animationTime * WALK_CYCLE_SPEED)
     : 0
   const bob = player.moving
-    ? Math.abs(Math.sin(player.animationTime * WALK_CYCLE_SPEED * 2)) * 2
+    ? Math.abs(Math.sin(player.animationTime * WALK_CYCLE_SPEED * 2)) * 1.5
     : 0
   const breath = player.moving ? 0 : idleBreath()
   const flip = player.facing === 'left' ? -1 : 1
 
-  // Stop-bounce: quick settle when coming to a halt
   const stopBounce = stopBounceTimer > 0
     ? Math.sin(stopBounceTimer * 14) * stopBounceTimer * 6
     : 0
-  // Start-squash: lean forward slightly at start
   const startSquash = startSquashTimer > 0
     ? Math.sin(startSquashTimer * 12) * startSquashTimer * 0.04
     : 0
@@ -668,112 +676,153 @@ const drawPlayerSide = (
   context.save()
   context.translate(player.x, player.y - bob - stopBounce)
 
-  // Squash-stretch on start/stop
   if (startSquash > 0) {
     context.scale(flip * (1 + startSquash), 1 - startSquash * 0.6)
   } else {
     context.scale(flip, 1)
   }
 
-  // Tail — more expressive S-curve, sways when idle
+  // ── Tail — S-curve from rear ──
   const tailCycle = player.moving ? cycle : 0
   const tailIdle = player.moving ? 0 : idleTailSway()
-  context.strokeStyle = '#c49a7a'
+  context.strokeStyle = '#d4a888'
   context.lineWidth = 2.5
   context.lineCap = 'round'
   context.beginPath()
-  context.moveTo(-10, -4)
+  context.moveTo(-18, -2)
   context.bezierCurveTo(
-    -24, 2 + tailIdle * 0.3,
-    -34, -6 + tailCycle * 5 + tailIdle * 0.6,
-    -22, -22 + tailCycle * 6 + tailIdle,
+    -30, -6 + tailIdle * 0.3,
+    -38, -16 + tailCycle * 5 + tailIdle * 0.6,
+    -28, -28 + tailCycle * 6 + tailIdle,
   )
   context.stroke()
-  // Tail tip — little curl at the end
-  const tipX = -22 + tailCycle * 2 + tailIdle * 0.4
-  const tipY = -22 + tailCycle * 6 + tailIdle
+  // Tail tip curl
+  const tipX = -28 + tailCycle * 2 + tailIdle * 0.4
+  const tipY = -28 + tailCycle * 6 + tailIdle
   context.beginPath()
   context.bezierCurveTo(tipX, tipY, tipX + 4, tipY - 6, tipX + 2, tipY - 10)
   context.stroke()
 
-  // Legs
-  const legSwing = cycle * 10
+  // ── Back legs (far side, slightly behind near legs) ──
+  const backLegSwing = cycle * 7
+  const frontLegSwing = -cycle * 7  // opposite phase for trot
   context.strokeStyle = '#6a4a2a'
-  context.lineWidth = 7
+  context.lineWidth = 5.5
   context.lineCap = 'round'
+  // Far back leg
   context.beginPath()
-  context.moveTo(-6, 6)
-  context.lineTo(-6 + legSwing, 22)
-  context.moveTo(6, 6)
-  context.lineTo(6 - legSwing, 22)
+  context.moveTo(-10, 4)
+  context.lineTo(-10 + backLegSwing, 16)
+  context.stroke()
+  // Far front leg
+  context.beginPath()
+  context.moveTo(12, 2)
+  context.lineTo(12 + frontLegSwing, 16)
   context.stroke()
 
-  // Feet — tiny toe beans visible on idle
+  // Far paws
   context.fillStyle = '#5a3a1a'
   context.beginPath()
-  context.ellipse(-6 + legSwing, 25, 6, 3.5, 0.2, 0, Math.PI * 2)
+  context.ellipse(-10 + backLegSwing, 18, 4.5, 2.5, 0.1, 0, Math.PI * 2)
   context.fill()
   context.beginPath()
-  context.ellipse(6 - legSwing, 25, 6, 3.5, -0.2, 0, Math.PI * 2)
+  context.ellipse(12 + frontLegSwing, 18, 4.5, 2.5, -0.1, 0, Math.PI * 2)
+  context.fill()
+
+  // ── Body — horizontal ellipse ──
+  context.fillStyle = '#96744e'
+  context.beginPath()
+  context.ellipse(0, -2 - breath * 0.2, 22, 12 + breath * 0.3, 0, 0, Math.PI * 2)
+  context.fill()
+
+  // Belly (lighter underside)
+  context.fillStyle = '#d4b896'
+  context.beginPath()
+  context.ellipse(0, 3, 16, 6, 0, 0, Math.PI)
+  context.fill()
+
+  // Back fur stripe
+  context.fillStyle = 'rgba(80, 50, 20, 0.15)'
+  context.beginPath()
+  context.ellipse(-2, -8, 14, 3, 0, Math.PI, Math.PI * 2)
+  context.fill()
+
+  // ── Near-side legs (on top of body) ──
+  context.strokeStyle = '#7a5a34'
+  context.lineWidth = 6
+  context.lineCap = 'round'
+  // Near back leg
+  context.beginPath()
+  context.moveTo(-10, 5)
+  context.lineTo(-10 - backLegSwing, 16)
+  context.stroke()
+  // Near front leg
+  context.beginPath()
+  context.moveTo(12, 3)
+  context.lineTo(12 - frontLegSwing, 16)
+  context.stroke()
+
+  // Near paws
+  context.fillStyle = '#6a4a2a'
+  context.beginPath()
+  context.ellipse(-10 - backLegSwing, 18, 5, 3, -0.1, 0, Math.PI * 2)
+  context.fill()
+  context.beginPath()
+  context.ellipse(12 - frontLegSwing, 18, 5, 3, 0.1, 0, Math.PI * 2)
   context.fill()
 
   // Toe beans (show when idle)
   if (!player.moving) {
-    context.fillStyle = '#e8a0a0'
-    for (const fx of [-6, 6]) {
+    context.fillStyle = '#f0a8a8'
+    for (const px of [-10, 12]) {
       for (let t = -1; t <= 1; t++) {
         context.beginPath()
-        context.arc(fx + t * 2.2, 24.5, 1, 0, Math.PI * 2)
+        context.arc(px + t * 1.8, 17.5, 0.9, 0, Math.PI * 2)
         context.fill()
       }
     }
   }
 
-  // Torso — breathes when idle
-  context.fillStyle = '#8a6a44'
+  // ── Bandana — red scarf at the neck ──
+  context.fillStyle = '#cc3333'
   context.beginPath()
-  context.roundRect(-13, -14 - breath * 0.3, 26, 22 + breath * 0.6, 8)
+  context.moveTo(14, -6)
+  context.lineTo(18, -2)
+  context.lineTo(14, 4)
+  context.lineTo(10, 0)
+  context.closePath()
+  context.fill()
+  // Bandana knot
+  context.fillStyle = '#aa2222'
+  context.beginPath()
+  context.arc(14, -1, 2.5, 0, Math.PI * 2)
+  context.fill()
+  // Bandana tail flutters
+  const bandanaFlutter = player.moving
+    ? Math.sin(player.animationTime * WALK_CYCLE_SPEED * 1.5) * 3
+    : Math.sin(sceneTime * 1.2) * 1
+  context.fillStyle = '#cc3333'
+  context.beginPath()
+  context.moveTo(12, 0)
+  context.quadraticCurveTo(6, 4 + bandanaFlutter, 2, 8 + bandanaFlutter)
+  context.lineTo(5, 6 + bandanaFlutter)
+  context.quadraticCurveTo(8, 3 + bandanaFlutter * 0.5, 12, 1)
+  context.closePath()
   context.fill()
 
-  // Belly patch — breathes in sync
-  context.fillStyle = '#c8a882'
-  context.beginPath()
-  context.roundRect(-7, -10 - breath * 0.2, 14, 16 + breath * 0.4, 6)
-  context.fill()
-
-  // Arms
-  const armSwing = cycle * 10
-  const armIdle = player.moving ? 0 : Math.sin(sceneTime * 1.8) * 1.5
-  context.strokeStyle = '#7a5a34'
-  context.lineWidth = 6
-  context.lineCap = 'round'
-  context.beginPath()
-  context.moveTo(-14, -8)
-  context.lineTo(-22, 4 - armSwing + armIdle)
-  context.moveTo(14, -8)
-  context.lineTo(22, 4 + armSwing - armIdle)
-  context.stroke()
-
-  // Hands — small paws
-  context.fillStyle = '#c8a882'
-  context.beginPath()
-  context.arc(-22, 4 - armSwing + armIdle, 4, 0, Math.PI * 2)
-  context.fill()
-  context.beginPath()
-  context.arc(22, 4 + armSwing - armIdle, 4, 0, Math.PI * 2)
-  context.fill()
-
-  // Rat head (side view) — slight head-bob when walking
-  if (player.moving) {
-    const headBob = Math.sin(player.animationTime * WALK_CYCLE_SPEED * 2) * 1.2
-    context.translate(0, -headBob * 0.5)
-  }
+  // ── Head — positioned at front of body ──
+  const headBob = player.moving
+    ? Math.sin(player.animationTime * WALK_CYCLE_SPEED * 2) * 1
+    : 0
+  context.save()
+  context.translate(18, -6 - headBob * 0.5)
   drawRatHeadSide(context, player.moving)
+  context.restore()
 
   context.restore()
 }
 
-// Back-facing humanoid rat (up / up-left / up-right)
+// ── Quadruped back view (up / up-left / up-right) — rat on all 4s from behind ──
 const drawPlayerBack = (
   context: CanvasRenderingContext2D,
   player: PlayerState,
@@ -783,7 +832,7 @@ const drawPlayerBack = (
     ? Math.sin(player.animationTime * WALK_CYCLE_SPEED)
     : 0
   const bob = player.moving
-    ? Math.abs(Math.sin(player.animationTime * WALK_CYCLE_SPEED * 2)) * 2
+    ? Math.abs(Math.sin(player.animationTime * WALK_CYCLE_SPEED * 2)) * 1.5
     : 0
   const breath = player.moving ? 0 : idleBreath()
 
@@ -793,146 +842,180 @@ const drawPlayerBack = (
 
   context.save()
   context.translate(player.x, player.y - bob - stopBounce)
-  // Mirror the whole sprite for up-left
   if (lean === -1) context.scale(-1, 1)
 
   const diagonal = lean !== 0
 
-  // Tail — hangs from base of spine, curls to the side; sways when idle
+  // ── Tail — prominent from behind, curls upward ──
   const tailIdle = player.moving ? 0 : idleTailSway()
-  context.strokeStyle = '#c49a7a'
+  context.strokeStyle = '#d4a888'
   context.lineWidth = 2.5
   context.lineCap = 'round'
   context.beginPath()
-  context.moveTo(diagonal ? 4 : 0, 2)
-  if (diagonal) {
-    context.bezierCurveTo(20, 8 + tailIdle * 0.2, 28, 0 + cycle * 4, 22, -10 + cycle * 5 + tailIdle * 0.5)
-  } else {
-    context.bezierCurveTo(-18, 8 + tailIdle * 0.3, -26, 0 + cycle * 4, -20, -10 + cycle * 5 + tailIdle * 0.6)
-  }
+  context.moveTo(0, -4)
+  context.bezierCurveTo(
+    diagonal ? 12 : -2, -12 + tailIdle * 0.3,
+    diagonal ? 16 : -6, -22 + cycle * 4 + tailIdle * 0.5,
+    diagonal ? 12 : -4, -32 + cycle * 5 + tailIdle * 0.6,
+  )
   context.stroke()
 
-  // Legs
-  const legSwing = cycle * 10
+  // ── Back legs (farther, slightly offset) ──
+  const legSwingL = cycle * 7
+  const legSwingR = -cycle * 7
   context.strokeStyle = '#6a4a2a'
-  context.lineWidth = 7
+  context.lineWidth = 5.5
   context.lineCap = 'round'
+  // Left back leg
   context.beginPath()
-  context.moveTo(-6, 6)
-  context.lineTo(-6 + legSwing, 22)
-  context.moveTo(6, 6)
-  context.lineTo(6 - legSwing, 22)
+  context.moveTo(-8, 4)
+  context.lineTo(-10 + legSwingL, 16)
+  context.stroke()
+  // Right back leg
+  context.beginPath()
+  context.moveTo(8, 4)
+  context.lineTo(10 + legSwingR, 16)
   context.stroke()
 
-  // Feet
+  // Back paws
   context.fillStyle = '#5a3a1a'
   context.beginPath()
-  context.ellipse(-6 + legSwing, 25, 6, 3.5, 0.2, 0, Math.PI * 2)
+  context.ellipse(-10 + legSwingL, 18, 5, 3, 0, 0, Math.PI * 2)
   context.fill()
   context.beginPath()
-  context.ellipse(6 - legSwing, 25, 6, 3.5, -0.2, 0, Math.PI * 2)
+  context.ellipse(10 + legSwingR, 18, 5, 3, 0, 0, Math.PI * 2)
   context.fill()
 
   // Toe beans (idle)
   if (!player.moving) {
-    context.fillStyle = '#e8a0a0'
-    for (const fx of [-6, 6]) {
+    context.fillStyle = '#f0a8a8'
+    for (const fx of [-10, 10]) {
       for (let t = -1; t <= 1; t++) {
         context.beginPath()
-        context.arc(fx + t * 2.2, 24.5, 1, 0, Math.PI * 2)
+        context.arc(fx + t * 1.8, 17.5, 0.9, 0, Math.PI * 2)
         context.fill()
       }
     }
   }
 
-  // Torso (back — breathes when idle)
-  context.fillStyle = '#7a5a38'
+  // ── Rump / body — round from behind ──
+  context.fillStyle = '#8a6a44'
   context.beginPath()
-  context.roundRect(-13, -14 - breath * 0.3, 26, 22 + breath * 0.6, 8)
+  context.ellipse(0, -1 - breath * 0.2, 16, 13 + breath * 0.3, 0, 0, Math.PI * 2)
   context.fill()
 
   // Back fur stripe
-  context.fillStyle = 'rgba(50, 32, 12, 0.18)'
+  context.fillStyle = 'rgba(60, 36, 14, 0.18)'
   context.beginPath()
-  context.roundRect(-5, -12, 10, 18, 4)
+  context.ellipse(0, -6, 5, 10, 0, 0, Math.PI * 2)
   context.fill()
 
-  // Arms
-  const armSwing = cycle * 10
-  const armIdle = player.moving ? 0 : Math.sin(sceneTime * 1.8) * 1.5
+  // ── Front legs (visible peeking out beyond body) ──
+  const frontLegL = -cycle * 6
+  const frontLegR = cycle * 6
   context.strokeStyle = '#7a5a34'
-  context.lineWidth = 6
+  context.lineWidth = 5
   context.lineCap = 'round'
+  // Left front leg
   context.beginPath()
-  context.moveTo(-14, -8)
-  context.lineTo(-22, 4 - armSwing + armIdle)
-  context.moveTo(14, -8)
-  context.lineTo(22, 4 + armSwing - armIdle)
+  context.moveTo(-12, 0)
+  context.lineTo(-16 + frontLegL, 14)
+  context.stroke()
+  // Right front leg
+  context.beginPath()
+  context.moveTo(12, 0)
+  context.lineTo(16 + frontLegR, 14)
   context.stroke()
 
-  // Hands
-  context.fillStyle = '#c8a882'
+  // Front paws
+  context.fillStyle = '#6a4a2a'
   context.beginPath()
-  context.arc(-22, 4 - armSwing + armIdle, 4, 0, Math.PI * 2)
+  context.ellipse(-16 + frontLegL, 16, 4.5, 2.5, 0, 0, Math.PI * 2)
   context.fill()
   context.beginPath()
-  context.arc(22, 4 + armSwing - armIdle, 4, 0, Math.PI * 2)
+  context.ellipse(16 + frontLegR, 16, 4.5, 2.5, 0, 0, Math.PI * 2)
   context.fill()
 
-  // Head (back of head) — subtle bob when walking
+  // ── Head (back of head) — bigger, rounder ──
   const headBobBack = player.moving
     ? Math.sin(player.animationTime * WALK_CYCLE_SPEED * 2) * 1
     : 0
   const headX = diagonal ? 3 : 0
-  context.fillStyle = '#9a7a54'
+  const headY = -14 - headBobBack
+  context.fillStyle = '#a8855c'
   context.beginPath()
-  context.arc(headX, -26 - headBobBack, 12, 0, Math.PI * 2)
+  context.arc(headX, headY, 13, 0, Math.PI * 2)
   context.fill()
 
-  // Ear bounce/twitch
+  // ── Bandana — visible at nape ──
+  context.fillStyle = '#cc3333'
+  context.beginPath()
+  context.arc(headX, headY + 12, 8, 0.2, Math.PI - 0.2)
+  context.lineTo(headX - 6, headY + 14)
+  context.closePath()
+  context.fill()
+  // Bandana knot at back
+  context.fillStyle = '#aa2222'
+  context.beginPath()
+  context.arc(headX, headY + 13, 2.5, 0, Math.PI * 2)
+  context.fill()
+  // Bandana tail flutters
+  const bandanaFlutter = player.moving
+    ? Math.sin(player.animationTime * WALK_CYCLE_SPEED * 1.5) * 3
+    : Math.sin(sceneTime * 1.2) * 1
+  context.fillStyle = '#cc3333'
+  context.beginPath()
+  context.moveTo(headX - 2, headY + 14)
+  context.quadraticCurveTo(headX - 6, headY + 20 + bandanaFlutter, headX - 8, headY + 24 + bandanaFlutter)
+  context.lineTo(headX - 5, headY + 22 + bandanaFlutter)
+  context.quadraticCurveTo(headX - 3, headY + 18 + bandanaFlutter * 0.5, headX, headY + 15)
+  context.closePath()
+  context.fill()
+
+  // ── Ears ──
   const earBob = player.moving
     ? Math.sin(sceneTime * WALK_CYCLE_SPEED * 2) * 2
     : idleEarTwitch()
 
-  // Left ear (from behind)
+  // Left ear
   context.fillStyle = '#7a5a34'
   context.beginPath()
-  context.arc(headX - 10, -36 - headBobBack - earBob * 0.5, 8, 0, Math.PI * 2)
+  context.arc(headX - 11, headY - 8 - earBob * 0.5, 9, 0, Math.PI * 2)
   context.fill()
-  context.fillStyle = '#f0a0b0'
+  context.fillStyle = '#f5aabb'
   context.beginPath()
-  context.arc(headX - 10, -36 - headBobBack - earBob * 0.5, 5.5, 0, Math.PI * 2)
+  context.arc(headX - 11, headY - 8 - earBob * 0.5, 6.5, 0, Math.PI * 2)
   context.fill()
 
-  // Right ear (from behind)
+  // Right ear
   context.fillStyle = '#7a5a34'
   context.beginPath()
-  context.arc(headX + 10, -36 - headBobBack - earBob, 8, 0, Math.PI * 2)
+  context.arc(headX + 11, headY - 8 - earBob, 9, 0, Math.PI * 2)
   context.fill()
-  context.fillStyle = '#f0a0b0'
+  context.fillStyle = '#f5aabb'
   context.beginPath()
-  context.arc(headX + 10, -36 - headBobBack - earBob, 5.5, 0, Math.PI * 2)
+  context.arc(headX + 11, headY - 8 - earBob, 6.5, 0, Math.PI * 2)
   context.fill()
 
-  // For diagonal: hint of near eye and whiskers peeking around the cheek
+  // For diagonal: hint of near eye and whiskers
   if (diagonal) {
     const blink = !player.moving && isBlinking()
     if (blink) {
       context.strokeStyle = '#0d0808'
-      context.lineWidth = 1.5
+      context.lineWidth = 2
       context.lineCap = 'round'
       context.beginPath()
-      context.moveTo(headX + 8, -24 - headBobBack)
-      context.lineTo(headX + 12, -24 - headBobBack)
+      context.moveTo(headX + 8, headY + 2)
+      context.lineTo(headX + 13, headY + 2)
       context.stroke()
     } else {
       context.fillStyle = '#0d0808'
       context.beginPath()
-      context.arc(headX + 10, -24 - headBobBack, 2.5, 0, Math.PI * 2)
+      context.arc(headX + 11, headY + 2, 3, 0, Math.PI * 2)
       context.fill()
-      context.fillStyle = 'rgba(255, 255, 255, 0.7)'
+      context.fillStyle = 'rgba(255, 255, 255, 0.8)'
       context.beginPath()
-      context.arc(headX + 11, -25 - headBobBack, 0.8, 0, Math.PI * 2)
+      context.arc(headX + 12, headY + 1, 1.2, 0, Math.PI * 2)
       context.fill()
     }
 
@@ -943,10 +1026,10 @@ const drawPlayerBack = (
     context.lineWidth = 0.8
     context.lineCap = 'round'
     context.beginPath()
-    context.moveTo(headX + 14, -22 - headBobBack)
-    context.lineTo(headX + 24, -19 + whiskerSpread - headBobBack)
-    context.moveTo(headX + 14, -21 - headBobBack)
-    context.lineTo(headX + 24, -25 - whiskerSpread - headBobBack)
+    context.moveTo(headX + 15, headY + 4)
+    context.lineTo(headX + 26, headY + 7 + whiskerSpread)
+    context.moveTo(headX + 15, headY + 3)
+    context.lineTo(headX + 26, headY - 1 - whiskerSpread)
     context.stroke()
   }
 
@@ -1005,13 +1088,13 @@ export const renderScene = (
     drawAlarmClock(context)
   }
 
-  // Shadow breathes slightly with the rat
+  // Shadow — wider for quadruped body, breathes slightly
   const shadowBreath = player.moving ? 0 : idleBreath() * 0.3
-  context.fillStyle = 'rgba(20, 12, 8, 0.38)'
+  context.fillStyle = 'rgba(20, 12, 8, 0.32)'
   context.beginPath()
   context.ellipse(
-    player.x, player.y + 26,
-    18 + shadowBreath, 8 + shadowBreath * 0.3,
+    player.x, player.y + 20,
+    24 + shadowBreath, 7 + shadowBreath * 0.2,
     0, 0, Math.PI * 2,
   )
   context.fill()
