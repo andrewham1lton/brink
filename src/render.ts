@@ -1070,22 +1070,22 @@ const drawPlayerBack = (
     ? Math.sin(sceneTime * WALK_CYCLE_SPEED * 2) * 2
     : idleEarTwitch()
 
-  // Left ear
+  // Left ear (back view — brown outer ear, no pink inner visible)
   context.fillStyle = '#7a5a34'
   context.beginPath()
   context.ellipse(-10, headY - 8 - earBob * 0.5, 8, 9, -0.2, 0, Math.PI * 2)
   context.fill()
-  context.fillStyle = '#f5aabb'
+  context.fillStyle = '#6b4c2c'
   context.beginPath()
   context.ellipse(-10, headY - 8 - earBob * 0.5, 5.5, 6.5, -0.2, 0, Math.PI * 2)
   context.fill()
 
-  // Right ear
+  // Right ear (back view — brown outer ear, no pink inner visible)
   context.fillStyle = '#7a5a34'
   context.beginPath()
   context.ellipse(10, headY - 8 - earBob, 8, 9, 0.2, 0, Math.PI * 2)
   context.fill()
-  context.fillStyle = '#f5aabb'
+  context.fillStyle = '#6b4c2c'
   context.beginPath()
   context.ellipse(10, headY - 8 - earBob, 5.5, 6.5, 0.2, 0, Math.PI * 2)
   context.fill()
