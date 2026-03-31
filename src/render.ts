@@ -510,11 +510,23 @@ const drawAlarmClock = (context: CanvasRenderingContext2D) => {
   context.fill()
   // Clock face
   context.fillStyle = '#4a8a5a'
-  context.fillRect(262, 213, 16, 10)
-  // Time display
+  context.fillRect(261, 213, 18, 10)
+  // Time display - show real system time
+  const now = new Date()
+  let hours = now.getHours()
+  const minutes = now.getMinutes().toString().padStart(2, '0')
+  const ampm = hours >= 12 ? 'P' : 'A'
+  hours = hours % 12 || 12
+  const timeStr = `${hours}:${minutes}`
   context.fillStyle = '#7aff7a'
-  context.font = '7px monospace'
-  context.fillText('7:42', 263, 221)
+  context.font = '6px monospace'
+  const textWidth = context.measureText(timeStr).width
+  const faceX = 261
+  const faceW = 18
+  const textX = faceX + (faceW - textWidth) / 2
+  context.fillText(timeStr, textX, 220)
+  context.font = '4px monospace'
+  context.fillText(ampm, faceX + faceW - 5, 213 + 9)
 }
 
 const WALK_CYCLE_SPEED = 10
