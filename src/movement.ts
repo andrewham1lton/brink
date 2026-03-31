@@ -137,8 +137,10 @@ export const stepPlayer = (
   } else if (horizontal > 0) {
     facing = 'right'
   } else {
-    // Moving straight down — keep current facing
-    facing = player.facing
+    // Moving straight down — resolve to a side facing so the rat turns around
+    facing = player.facing === 'up-left' || player.facing === 'left'
+      ? 'left'
+      : 'right'
   }
 
   let newX = clamp(player.x + normalizedX * distance, bounds.minX, bounds.maxX)

@@ -873,18 +873,18 @@ const drawPlayerBack = (
   context.translate(player.x, player.y - bob - stopBounce)
   if (lean === -1) context.scale(-1, 1)
 
-  // ── Tail — curls straight up from rump center ──
+  // ── Tail — hangs down toward the viewer from the rump ──
   const tailIdle = player.moving ? 0 : idleTailSway()
-  const tailSway = tailIdle * 0.4
+  const tailSway = tailIdle * 0.3
   context.strokeStyle = '#d4a888'
   context.lineWidth = 2.5
   context.lineCap = 'round'
   context.beginPath()
-  context.moveTo(tailSway * 0.2, -6)
+  context.moveTo(tailSway * 0.2, 8)
   context.bezierCurveTo(
-    tailSway * 0.5, -14,
-    2 + tailSway * 0.7 + cycle * 2, -24 + cycle * 3,
-    tailSway + cycle * 3, -34 + cycle * 4,
+    tailSway * 0.5 + cycle * 2, 16,
+    2 + tailSway * 0.7, 24 + cycle * 3,
+    tailSway + cycle * 2, 32 + cycle * 3,
   )
   context.stroke()
 
