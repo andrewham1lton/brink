@@ -118,13 +118,8 @@ export const stepPlayer = (
   const vertical = Number(controls.down) - Number(controls.up)
   const magnitude = Math.hypot(horizontal, vertical)
 
-  // Resolve an up-* facing back to a side facing for use when stopped or
-  // moving downward — up-left → left, up / up-right → right.
-  const sideFacing = (f: Facing): Facing =>
-    f === 'up-left' ? 'left' : f === 'up' || f === 'up-right' ? 'right' : f
-
   if (magnitude === 0 || deltaTime <= 0) {
-    return { ...player, moving: false, facing: sideFacing(player.facing) }
+    return { ...player, moving: false }
   }
 
   const normalizedX = horizontal / magnitude
@@ -142,8 +137,8 @@ export const stepPlayer = (
   } else if (horizontal > 0) {
     facing = 'right'
   } else {
-    // Moving straight down — drop any up-facing
-    facing = sideFacing(player.facing)
+    // Moving straight down — keep current facing
+    facing = player.facing
   }
 
   let newX = clamp(player.x + normalizedX * distance, bounds.minX, bounds.maxX)

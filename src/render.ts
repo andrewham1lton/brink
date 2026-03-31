@@ -783,30 +783,59 @@ const drawPlayerSide = (
     }
   }
 
-  // ── Bandana — red scarf at the neck ──
+  // ── Bandana — prominent red scarf at the neck ──
+  const bandanaFlutter = player.moving
+    ? Math.sin(player.animationTime * WALK_CYCLE_SPEED * 1.5) * 4
+    : Math.sin(sceneTime * 1.2) * 1.5
+
+  // Scarf wrap around neck
   context.fillStyle = '#cc3333'
   context.beginPath()
-  context.moveTo(14, -6)
-  context.lineTo(18, -2)
-  context.lineTo(14, 4)
-  context.lineTo(10, 0)
+  context.moveTo(10, -10)
+  context.quadraticCurveTo(18, -8, 20, -2)
+  context.quadraticCurveTo(18, 6, 10, 8)
+  context.quadraticCurveTo(6, 4, 6, -2)
+  context.quadraticCurveTo(6, -8, 10, -10)
   context.closePath()
   context.fill()
-  // Bandana knot
+
+  // Scarf highlight fold
+  context.fillStyle = '#dd4444'
+  context.beginPath()
+  context.moveTo(12, -8)
+  context.quadraticCurveTo(17, -6, 18, -2)
+  context.quadraticCurveTo(17, 2, 14, 4)
+  context.quadraticCurveTo(12, 0, 12, -8)
+  context.closePath()
+  context.fill()
+
+  // Knot
   context.fillStyle = '#aa2222'
   context.beginPath()
-  context.arc(14, -1, 2.5, 0, Math.PI * 2)
+  context.arc(10, 2, 3.5, 0, Math.PI * 2)
   context.fill()
-  // Bandana tail flutters
-  const bandanaFlutter = player.moving
-    ? Math.sin(player.animationTime * WALK_CYCLE_SPEED * 1.5) * 3
-    : Math.sin(sceneTime * 1.2) * 1
   context.fillStyle = '#cc3333'
   context.beginPath()
-  context.moveTo(12, 0)
-  context.quadraticCurveTo(6, 4 + bandanaFlutter, 2, 8 + bandanaFlutter)
-  context.lineTo(5, 6 + bandanaFlutter)
-  context.quadraticCurveTo(8, 3 + bandanaFlutter * 0.5, 12, 1)
+  context.arc(10, 2, 2, 0, Math.PI * 2)
+  context.fill()
+
+  // Flowing tail — two trailing ends
+  context.fillStyle = '#cc3333'
+  // First tail
+  context.beginPath()
+  context.moveTo(8, 3)
+  context.quadraticCurveTo(2, 8 + bandanaFlutter, -4, 14 + bandanaFlutter)
+  context.lineTo(-1, 12 + bandanaFlutter)
+  context.quadraticCurveTo(4, 7 + bandanaFlutter * 0.5, 9, 4)
+  context.closePath()
+  context.fill()
+  // Second tail (slightly offset)
+  context.fillStyle = '#bb2828'
+  context.beginPath()
+  context.moveTo(10, 4)
+  context.quadraticCurveTo(5, 10 + bandanaFlutter * 0.8, 0, 16 + bandanaFlutter * 0.7)
+  context.lineTo(3, 14 + bandanaFlutter * 0.7)
+  context.quadraticCurveTo(7, 9 + bandanaFlutter * 0.4, 11, 5)
   context.closePath()
   context.fill()
 
@@ -844,55 +873,54 @@ const drawPlayerBack = (
   context.translate(player.x, player.y - bob - stopBounce)
   if (lean === -1) context.scale(-1, 1)
 
-  const diagonal = lean !== 0
-
-  // ── Tail — prominent from behind, curls upward ──
+  // ── Tail — curls straight up from rump center ──
   const tailIdle = player.moving ? 0 : idleTailSway()
+  const tailSway = tailIdle * 0.4
   context.strokeStyle = '#d4a888'
   context.lineWidth = 2.5
   context.lineCap = 'round'
   context.beginPath()
-  context.moveTo(0, -4)
+  context.moveTo(tailSway * 0.2, -6)
   context.bezierCurveTo(
-    diagonal ? 12 : -2, -12 + tailIdle * 0.3,
-    diagonal ? 16 : -6, -22 + cycle * 4 + tailIdle * 0.5,
-    diagonal ? 12 : -4, -32 + cycle * 5 + tailIdle * 0.6,
+    tailSway * 0.5, -14,
+    2 + tailSway * 0.7 + cycle * 2, -24 + cycle * 3,
+    tailSway + cycle * 3, -34 + cycle * 4,
   )
   context.stroke()
 
-  // ── Back legs (farther, slightly offset) ──
-  const legSwingL = cycle * 7
-  const legSwingR = -cycle * 7
+  // ── Legs — simple symmetrical walk ──
+  const legSwingL = cycle * 6
+  const legSwingR = -cycle * 6
+
+  // Back legs (wider, nearer to viewer)
   context.strokeStyle = '#6a4a2a'
-  context.lineWidth = 5.5
+  context.lineWidth = 6
   context.lineCap = 'round'
-  // Left back leg
   context.beginPath()
-  context.moveTo(-8, 4)
-  context.lineTo(-10 + legSwingL, 16)
+  context.moveTo(-8, 5)
+  context.lineTo(-9 + legSwingL, 17)
   context.stroke()
-  // Right back leg
   context.beginPath()
-  context.moveTo(8, 4)
-  context.lineTo(10 + legSwingR, 16)
+  context.moveTo(8, 5)
+  context.lineTo(9 + legSwingR, 17)
   context.stroke()
 
   // Back paws
   context.fillStyle = '#5a3a1a'
   context.beginPath()
-  context.ellipse(-10 + legSwingL, 18, 5, 3, 0, 0, Math.PI * 2)
+  context.ellipse(-9 + legSwingL, 19, 5, 3, 0, 0, Math.PI * 2)
   context.fill()
   context.beginPath()
-  context.ellipse(10 + legSwingR, 18, 5, 3, 0, 0, Math.PI * 2)
+  context.ellipse(9 + legSwingR, 19, 5, 3, 0, 0, Math.PI * 2)
   context.fill()
 
   // Toe beans (idle)
   if (!player.moving) {
     context.fillStyle = '#f0a8a8'
-    for (const fx of [-10, 10]) {
+    for (const fx of [-9, 9]) {
       for (let t = -1; t <= 1; t++) {
         context.beginPath()
-        context.arc(fx + t * 1.8, 17.5, 0.9, 0, Math.PI * 2)
+        context.arc(fx + t * 1.8, 18.5, 0.9, 0, Math.PI * 2)
         context.fill()
       }
     }
@@ -901,74 +929,55 @@ const drawPlayerBack = (
   // ── Rump / body — round from behind ──
   context.fillStyle = '#8a6a44'
   context.beginPath()
-  context.ellipse(0, -1 - breath * 0.2, 16, 13 + breath * 0.3, 0, 0, Math.PI * 2)
+  context.ellipse(0, 0 - breath * 0.2, 15, 12 + breath * 0.3, 0, 0, Math.PI * 2)
   context.fill()
 
   // Back fur stripe
   context.fillStyle = 'rgba(60, 36, 14, 0.18)'
   context.beginPath()
-  context.ellipse(0, -6, 5, 10, 0, 0, Math.PI * 2)
+  context.ellipse(0, -4, 4, 9, 0, 0, Math.PI * 2)
   context.fill()
 
-  // ── Front legs (visible peeking out beyond body) ──
-  const frontLegL = -cycle * 6
-  const frontLegR = cycle * 6
+  // Front legs (peeking out to sides of body)
+  const frontLegL = -cycle * 5
+  const frontLegR = cycle * 5
   context.strokeStyle = '#7a5a34'
   context.lineWidth = 5
   context.lineCap = 'round'
-  // Left front leg
   context.beginPath()
-  context.moveTo(-12, 0)
-  context.lineTo(-16 + frontLegL, 14)
+  context.moveTo(-13, -2)
+  context.lineTo(-15 + frontLegL, 13)
   context.stroke()
-  // Right front leg
   context.beginPath()
-  context.moveTo(12, 0)
-  context.lineTo(16 + frontLegR, 14)
+  context.moveTo(13, -2)
+  context.lineTo(15 + frontLegR, 13)
   context.stroke()
 
   // Front paws
   context.fillStyle = '#6a4a2a'
   context.beginPath()
-  context.ellipse(-16 + frontLegL, 16, 4.5, 2.5, 0, 0, Math.PI * 2)
+  context.ellipse(-15 + frontLegL, 15, 4.5, 2.5, 0, 0, Math.PI * 2)
   context.fill()
   context.beginPath()
-  context.ellipse(16 + frontLegR, 16, 4.5, 2.5, 0, 0, Math.PI * 2)
+  context.ellipse(15 + frontLegR, 15, 4.5, 2.5, 0, 0, Math.PI * 2)
   context.fill()
 
-  // ── Head (back of head) — bigger, rounder ──
-  const headBobBack = player.moving
+  // ── Head (back of head) ──
+  const headBob = player.moving
     ? Math.sin(player.animationTime * WALK_CYCLE_SPEED * 2) * 1
     : 0
-  const headX = diagonal ? 3 : 0
-  const headY = -14 - headBobBack
+  const headY = -13 - headBob
+
   context.fillStyle = '#a8855c'
   context.beginPath()
-  context.arc(headX, headY, 13, 0, Math.PI * 2)
+  context.arc(0, headY, 13, 0, Math.PI * 2)
   context.fill()
 
-  // ── Bandana — visible at nape ──
+  // ── Bandana — small hint at nape, not prominent ──
   context.fillStyle = '#cc3333'
   context.beginPath()
-  context.arc(headX, headY + 12, 8, 0.2, Math.PI - 0.2)
-  context.lineTo(headX - 6, headY + 14)
-  context.closePath()
-  context.fill()
-  // Bandana knot at back
-  context.fillStyle = '#aa2222'
-  context.beginPath()
-  context.arc(headX, headY + 13, 2.5, 0, Math.PI * 2)
-  context.fill()
-  // Bandana tail flutters
-  const bandanaFlutter = player.moving
-    ? Math.sin(player.animationTime * WALK_CYCLE_SPEED * 1.5) * 3
-    : Math.sin(sceneTime * 1.2) * 1
-  context.fillStyle = '#cc3333'
-  context.beginPath()
-  context.moveTo(headX - 2, headY + 14)
-  context.quadraticCurveTo(headX - 6, headY + 20 + bandanaFlutter, headX - 8, headY + 24 + bandanaFlutter)
-  context.lineTo(headX - 5, headY + 22 + bandanaFlutter)
-  context.quadraticCurveTo(headX - 3, headY + 18 + bandanaFlutter * 0.5, headX, headY + 15)
+  context.arc(0, headY + 11, 6, 0.4, Math.PI - 0.4)
+  context.lineTo(-4, headY + 12)
   context.closePath()
   context.fill()
 
@@ -977,45 +986,43 @@ const drawPlayerBack = (
     ? Math.sin(sceneTime * WALK_CYCLE_SPEED * 2) * 2
     : idleEarTwitch()
 
-  // Left ear
   context.fillStyle = '#7a5a34'
   context.beginPath()
-  context.arc(headX - 11, headY - 8 - earBob * 0.5, 9, 0, Math.PI * 2)
+  context.arc(-11, headY - 8 - earBob * 0.5, 9, 0, Math.PI * 2)
   context.fill()
   context.fillStyle = '#f5aabb'
   context.beginPath()
-  context.arc(headX - 11, headY - 8 - earBob * 0.5, 6.5, 0, Math.PI * 2)
+  context.arc(-11, headY - 8 - earBob * 0.5, 6.5, 0, Math.PI * 2)
   context.fill()
 
-  // Right ear
   context.fillStyle = '#7a5a34'
   context.beginPath()
-  context.arc(headX + 11, headY - 8 - earBob, 9, 0, Math.PI * 2)
+  context.arc(11, headY - 8 - earBob, 9, 0, Math.PI * 2)
   context.fill()
   context.fillStyle = '#f5aabb'
   context.beginPath()
-  context.arc(headX + 11, headY - 8 - earBob, 6.5, 0, Math.PI * 2)
+  context.arc(11, headY - 8 - earBob, 6.5, 0, Math.PI * 2)
   context.fill()
 
   // For diagonal: hint of near eye and whiskers
-  if (diagonal) {
+  if (lean !== 0) {
     const blink = !player.moving && isBlinking()
     if (blink) {
       context.strokeStyle = '#0d0808'
       context.lineWidth = 2
       context.lineCap = 'round'
       context.beginPath()
-      context.moveTo(headX + 8, headY + 2)
-      context.lineTo(headX + 13, headY + 2)
+      context.moveTo(8, headY + 1)
+      context.lineTo(13, headY + 1)
       context.stroke()
     } else {
       context.fillStyle = '#0d0808'
       context.beginPath()
-      context.arc(headX + 11, headY + 2, 3, 0, Math.PI * 2)
+      context.arc(11, headY + 1, 3, 0, Math.PI * 2)
       context.fill()
       context.fillStyle = 'rgba(255, 255, 255, 0.8)'
       context.beginPath()
-      context.arc(headX + 12, headY + 1, 1.2, 0, Math.PI * 2)
+      context.arc(12, headY, 1.2, 0, Math.PI * 2)
       context.fill()
     }
 
@@ -1026,10 +1033,10 @@ const drawPlayerBack = (
     context.lineWidth = 0.8
     context.lineCap = 'round'
     context.beginPath()
-    context.moveTo(headX + 15, headY + 4)
-    context.lineTo(headX + 26, headY + 7 + whiskerSpread)
-    context.moveTo(headX + 15, headY + 3)
-    context.lineTo(headX + 26, headY - 1 - whiskerSpread)
+    context.moveTo(15, headY + 3)
+    context.lineTo(26, headY + 6 + whiskerSpread)
+    context.moveTo(15, headY + 2)
+    context.lineTo(26, headY - 2 - whiskerSpread)
     context.stroke()
   }
 
