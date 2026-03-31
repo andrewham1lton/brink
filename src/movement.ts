@@ -10,7 +10,7 @@ export interface ControlsState {
   up: boolean
 }
 
-export type Facing = 'left' | 'right' | 'up' | 'up-left' | 'up-right'
+export type Facing = 'left' | 'right' | 'up' | 'up-left' | 'up-right' | 'down' | 'down-left' | 'down-right'
 
 export interface PlayerState {
   animationTime: number
@@ -118,13 +118,8 @@ export const stepPlayer = (
   const vertical = Number(controls.down) - Number(controls.up)
   const magnitude = Math.hypot(horizontal, vertical)
 
-  // Resolve an up-* facing back to a side facing for use when stopped or
-  // moving downward — up-left → left, up / up-right → right.
-  const sideFacing = (f: Facing): Facing =>
-    f === 'up-left' ? 'left' : f === 'up' || f === 'up-right' ? 'right' : f
-
   if (magnitude === 0 || deltaTime <= 0) {
-    return { ...player, moving: false, facing: sideFacing(player.facing) }
+    return { ...player, moving: false }
   }
 
   const normalizedX = horizontal / magnitude
@@ -137,13 +132,16 @@ export const stepPlayer = (
     facing = 'up-right'
   } else if (vertical < 0 && horizontal < 0) {
     facing = 'up-left'
+  } else if (vertical > 0 && horizontal < 0) {
+    facing = 'down-left'
+  } else if (vertical > 0 && horizontal > 0) {
+    facing = 'down-right'
+  } else if (vertical > 0 && horizontal === 0) {
+    facing = 'down'
   } else if (horizontal < 0) {
     facing = 'left'
-  } else if (horizontal > 0) {
-    facing = 'right'
   } else {
-    // Moving straight down — drop any up-facing
-    facing = sideFacing(player.facing)
+    facing = 'right'
   }
 
   let newX = clamp(player.x + normalizedX * distance, bounds.minX, bounds.maxX)
