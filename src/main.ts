@@ -10,7 +10,6 @@ import {
   type PlayerState,
 } from './movement'
 import { renderScene } from './render'
-import { startStartupSession } from './startupSession'
 
 const app = document.querySelector<HTMLDivElement>('#app')
 
@@ -106,5 +105,4 @@ const frame = (time: number) => {
 
 renderScene(context, player)
 syncDebugState()
-startStartupSession()
 window.requestAnimationFrame(frame)

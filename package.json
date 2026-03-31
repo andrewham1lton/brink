@@ -2,26 +2,71 @@
   "name": "game",
   "private": true,
   "version": "0.0.0",
+  "description": "A desktop room exploration prototype built with Electron and Vite.",
+  "author": "Andrew Hamilton",
   "type": "module",
+  "main": "dist-electron/main.js",
   "scripts": {
-    "dev": "vite",
-    "start": "vite --host 127.0.0.1 --port 5173 --open",
+    "dev": "vite --host 127.0.0.1 --port 5173",
+    "start": "npm run dev",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "e2e": "playwright test",
-    "verify": "./scripts/verify.sh"
+    "build": "tsc && tsc -p tsconfig.electron.json && vite build",
+    "preview": "npm run build && electron .",
+    "e2e": "npm run build && playwright test",
+    "verify": "./scripts/verify.sh",
+    "dist": "npm run build && electron-builder --publish never",
+    "dist:mac": "npm run build && electron-builder --mac dmg zip --publish never",
+    "dist:win": "npm run build && electron-builder --win nsis portable --publish never",
+    "dist:unpacked": "npm run build && electron-builder --dir --publish never",
+    "dock:sync": "node ./scripts/sync-dock-app.mjs",
+    "dock:open": "node ./scripts/sync-dock-app.mjs --open"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@playwright/test": "^1.57.0",
+    "@types/node": "^24.10.1",
+    "electron": "^38.7.2",
+    "electron-builder": "^26.0.12",
     "eslint": "^9.39.1",
     "globals": "^16.5.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.1",
     "vite": "^8.0.1",
+    "vite-plugin-electron": "^0.29.0",
     "vitest": "^4.0.2"
+  },
+  "build": {
+    "appId": "com.andrewhamilton.guyinaroom",
+    "asar": true,
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "directories": {
+      "output": "artifacts/release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.games",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "nsis": {
+      "allowToChangeInstallationDirectory": false,
+      "oneClick": true,
+      "perMachine": false
+    },
+    "productName": "Guy In A Room",
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    }
   }
 }

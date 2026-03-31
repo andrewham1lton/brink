@@ -1,28 +1,46 @@
-import { expect, test } from '@playwright/test'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const readPosition = async (getAttribute: (name: string) => Promise<string | null>) => {
-  const x = Number(await getAttribute('data-player-x'))
-  const y = Number(await getAttribute('data-player-y'))
+import { _electron as electron, expect, test, type Page } from '@playwright/test'
+
+const projectRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+)
+
+const readPosition = async (window: Page) => {
+  const app = window.locator('#app')
+  const x = Number(await app.getAttribute('data-player-x'))
+  const y = Number(await app.getAttribute('data-player-y'))
   return { x, y }
 }
 
-test('the player moves around the room with WASD', async ({ page }) => {
-  await page.goto('/')
+test('the player moves around the room with WASD', async () => {
+  const electronApp = await electron.launch({
+    args: ['.'],
+    cwd: projectRoot,
+  })
 
-  const app = page.locator('#app')
-  const start = await readPosition((name) => app.getAttribute(name))
+  try {
+    const window = await electronApp.firstWindow()
+    await window.bringToFront()
+    await window.locator('canvas').click()
+    const start = await readPosition(window)
 
-  await page.keyboard.down('d')
-  await page.waitForTimeout(150)
-  await page.keyboard.up('d')
+    await window.keyboard.down('d')
+    await window.waitForTimeout(150)
+    await window.keyboard.up('d')
 
-  const movedRight = await readPosition((name) => app.getAttribute(name))
-  expect(movedRight.x).toBeGreaterThan(start.x + 5)
+    const movedRight = await readPosition(window)
+    expect(movedRight.x).toBeGreaterThan(start.x + 5)
 
-  await page.keyboard.down('w')
-  await page.waitForTimeout(150)
-  await page.keyboard.up('w')
+    await window.keyboard.down('w')
+    await window.waitForTimeout(150)
+    await window.keyboard.up('w')
 
-  const movedUp = await readPosition((name) => app.getAttribute(name))
-  expect(movedUp.y).toBeLessThan(movedRight.y - 5)
+    const movedUp = await readPosition(window)
+    expect(movedUp.y).toBeLessThan(movedRight.y - 5)
+  } finally {
+    await electronApp.close()
+  }
 })

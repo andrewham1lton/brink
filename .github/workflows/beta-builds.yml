@@ -1,0 +1,43 @@
+name: Beta Builds
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - develop
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-latest
+          - windows-latest
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build macOS beta bundle
+        if: runner.os == 'macOS'
+        run: npm run dist:mac
+
+      - name: Build Windows beta bundle
+        if: runner.os == 'Windows'
+        run: npm run dist:win
+
+      - name: Upload beta artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: beta-${{ runner.os }}
+          path: artifacts/release/*
+          if-no-files-found: error
