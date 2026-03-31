@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 5173",
     "start": "npm run dev",
+    "build:icons": "python3 ./scripts/build-icons.py",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -44,6 +45,7 @@
     "directories": {
       "output": "artifacts/release"
     },
+    "icon": "build/icon.png",
     "files": [
       "dist/**/*",
       "dist-electron/**/*",
@@ -51,6 +53,7 @@
     ],
     "mac": {
       "category": "public.app-category.games",
+      "icon": "build/icon.icns",
       "target": [
         "dmg",
         "zip"
@@ -63,6 +66,7 @@
     },
     "productName": "Brink",
     "win": {
+      "icon": "build/icon.ico",
       "target": [
         "nsis",
         "portable"
