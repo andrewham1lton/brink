@@ -515,7 +515,6 @@ const drawAlarmClock = (context: CanvasRenderingContext2D) => {
   const now = new Date()
   let hours = now.getHours()
   const minutes = now.getMinutes().toString().padStart(2, '0')
-  const ampm = hours >= 12 ? 'P' : 'A'
   hours = hours % 12 || 12
   const timeStr = `${hours}:${minutes}`
   context.fillStyle = '#7aff7a'
@@ -525,8 +524,6 @@ const drawAlarmClock = (context: CanvasRenderingContext2D) => {
   const faceW = 18
   const textX = faceX + (faceW - textWidth) / 2
   context.fillText(timeStr, textX, 220)
-  context.font = '4px monospace'
-  context.fillText(ampm, faceX + faceW - 5, 213 + 9)
 }
 
 const WALK_CYCLE_SPEED = 10
