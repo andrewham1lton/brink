@@ -46,8 +46,7 @@ export interface Rect {
 export const FURNITURE_HITBOXES: Rect[] = [
   { x: 96, y: 90, width: 142, height: 94 },    // Bookshelf
   { x: 242, y: 90, width: 108, height: 94 },    // Dresser
-  { x: 242, y: 268, width: 8, height: 40 },      // Nightstand left leg
-  { x: 290, y: 268, width: 8, height: 40 },      // Nightstand right leg
+  { x: 242, y: 268, width: 56, height: 40 },      // Nightstand legs
   { x: 636, y: 168, width: 194, height: 182 },  // Bed
   { x: 826, y: 40, width: 134, height: 152 },   // Closed door + frame
 ]

@@ -1437,11 +1437,6 @@ const drawPlayer = (context: CanvasRenderingContext2D, player: PlayerState) => {
   }
 }
 
-// Y threshold below which the alarm clock should render on top of the player.
-// The alarm clock sits on the nightstand surface at y≈226; anything above that
-// (lower Y) means the player is standing behind the clock.
-const ALARM_CLOCK_DEPTH_Y = 228
-
 export const renderScene = (
   context: CanvasRenderingContext2D,
   player: PlayerState,
@@ -1471,17 +1466,13 @@ export const renderScene = (
   drawRug(context)
   drawFurniture(context)
 
-  // Depth sorting: nightstand body + alarm clock render on top when player is behind
+  // Depth sorting: nightstand body renders on top when player is behind
   const NIGHTSTAND_DEPTH_Y = 248
   const playerBehindNightstand = player.y < NIGHTSTAND_DEPTH_Y
     && player.x > 210 && player.x < 330
-  const playerBehindClock = player.y < ALARM_CLOCK_DEPTH_Y
 
   if (!playerBehindNightstand) {
     drawNightstandBody(context)
-  }
-  if (!playerBehindClock) {
-    drawAlarmClock(context)
   }
 
   // Shadow — wider for quadruped body, breathes slightly
@@ -1500,7 +1491,7 @@ export const renderScene = (
   if (playerBehindNightstand) {
     drawNightstandBody(context)
   }
-  if (playerBehindClock) {
-    drawAlarmClock(context)
-  }
+
+  // Alarm clock always renders in front of the player
+  drawAlarmClock(context)
 }
