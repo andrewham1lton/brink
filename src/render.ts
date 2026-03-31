@@ -28,11 +28,15 @@ const drawBackdrop = (context: CanvasRenderingContext2D) => {
   context.fillStyle = 'rgba(160, 120, 70, 0.25)'
   context.fillRect(0, 100, CANVAS_WIDTH, 60)
 
-  // Chair rail molding line
+  // Chair rail molding line (split to skip window)
   context.strokeStyle = 'rgba(120, 80, 40, 0.5)'
   context.lineWidth = 2
   context.beginPath()
   context.moveTo(0, 100)
+  context.lineTo(366, 100)
+  context.stroke()
+  context.beginPath()
+  context.moveTo(522, 100)
   context.lineTo(CANVAS_WIDTH, 100)
   context.stroke()
 
