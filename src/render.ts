@@ -771,17 +771,6 @@ const drawPlayerSide = (
   context.ellipse(12 - frontLegSwing, 18, 5, 3, 0.1, 0, Math.PI * 2)
   context.fill()
 
-  // Toe beans (show when idle)
-  if (!player.moving) {
-    context.fillStyle = '#f0a8a8'
-    for (const px of [-10, 12]) {
-      for (let t = -1; t <= 1; t++) {
-        context.beginPath()
-        context.arc(px + t * 1.8, 17.5, 0.9, 0, Math.PI * 2)
-        context.fill()
-      }
-    }
-  }
 
   // ── Bandana — prominent red scarf at the neck ──
   const bandanaFlutter = player.moving
@@ -933,19 +922,6 @@ const drawPlayerBack = (
     context.ellipse(pawX, pawY + 1, 5.5, 3, 0, 0, Math.PI * 2)
     context.fill()
 
-    // Toe beans (idle only)
-    if (!player.moving) {
-      context.fillStyle = '#f0a8a8'
-      for (let t = -1; t <= 1; t++) {
-        context.beginPath()
-        context.arc(pawX + t * 2, pawY + 0.5, 1, 0, Math.PI * 2)
-        context.fill()
-      }
-      // Pad
-      context.beginPath()
-      context.ellipse(pawX, pawY + 2.5, 2, 1.2, 0, 0, Math.PI * 2)
-      context.fill()
-    }
   }
 
   // ── Front legs — drawn first (farther from viewer, peeking past head side) ──
@@ -1261,17 +1237,6 @@ const drawPlayerFront = (
   context.ellipse(10 + frontLegR, 19, 5, 3, 0, 0, Math.PI * 2)
   context.fill()
 
-  // Toe beans (idle)
-  if (!player.moving) {
-    context.fillStyle = '#f0a8a8'
-    for (const fx of [-10, 10]) {
-      for (let t = -1; t <= 1; t++) {
-        context.beginPath()
-        context.arc(fx + t * 1.8, 18.5, 0.9, 0, Math.PI * 2)
-        context.fill()
-      }
-    }
-  }
 
   // ── Head — full face, centered ──
   const headBob = player.moving
