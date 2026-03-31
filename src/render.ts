@@ -28,11 +28,15 @@ const drawBackdrop = (context: CanvasRenderingContext2D) => {
   context.fillStyle = 'rgba(160, 120, 70, 0.25)'
   context.fillRect(0, 100, CANVAS_WIDTH, 60)
 
-  // Chair rail molding line
+  // Chair rail molding line (split to skip window)
   context.strokeStyle = 'rgba(120, 80, 40, 0.5)'
   context.lineWidth = 2
   context.beginPath()
   context.moveTo(0, 100)
+  context.lineTo(366, 100)
+  context.stroke()
+  context.beginPath()
+  context.moveTo(522, 100)
   context.lineTo(CANVAS_WIDTH, 100)
   context.stroke()
 
@@ -399,59 +403,44 @@ const drawFurniture = (context: CanvasRenderingContext2D) => {
   context.ellipse(268, 310, 40, 8, 0, 0, Math.PI * 2)
   context.fill()
 
-  // Legs
+  // Legs (always behind player)
   context.fillStyle = '#3a2416'
   context.fillRect(242, 268, 8, 40)
   context.fillRect(290, 268, 8, 40)
 
-  // Body
-  context.fillStyle = '#4a3020'
-  context.fillRect(240, 230, 60, 42)
-
-  // Drawer
-  context.fillStyle = '#5a3828'
-  context.fillRect(244, 246, 52, 18)
-  // Drawer knob
-  context.fillStyle = '#c4a860'
-  context.beginPath()
-  context.arc(270, 255, 2.5, 0, Math.PI * 2)
-  context.fill()
-
-  // Top surface
-  context.fillStyle = '#5d3824'
-  context.fillRect(236, 222, 68, 12)
-
-  // Top highlight
-  context.fillStyle = 'rgba(255, 220, 160, 0.1)'
-  context.fillRect(236, 222, 68, 3)
-
-  // === Lamp (on bookshelf) ===
+  // === Lamp (on top of bookshelf) ===
   // Warm glow halo
   context.save()
-  const glowGrad = context.createRadialGradient(160, 66, 5, 160, 66, 80)
+  const glowGrad = context.createRadialGradient(160, 46, 5, 160, 46, 80)
   glowGrad.addColorStop(0, 'rgba(255, 220, 120, 0.2)')
   glowGrad.addColorStop(1, 'rgba(255, 220, 120, 0)')
   context.fillStyle = glowGrad
   context.beginPath()
-  context.arc(160, 66, 80, 0, Math.PI * 2)
+  context.arc(160, 46, 80, 0, Math.PI * 2)
   context.fill()
   context.restore()
 
+  // Lamp bulb glow (drawn before shade so shade covers it)
+  context.fillStyle = '#f0d387'
+  context.beginPath()
+  context.arc(160, 46, 8, 0, Math.PI * 2)
+  context.fill()
+
   // Lamp base/stand
   context.fillStyle = '#d7ad74'
-  context.fillRect(155, 74, 10, 54)
+  context.fillRect(155, 54, 10, 50)
 
   // Lamp base plate
   context.fillStyle = '#c49a63'
-  context.fillRect(146, 124, 28, 6)
+  context.fillRect(146, 104, 28, 6)
 
-  // Lampshade
+  // Lampshade (drawn after bulb so it appears on top)
   context.fillStyle = '#f5e4b8'
   context.beginPath()
-  context.moveTo(140, 74)
-  context.lineTo(180, 74)
-  context.lineTo(174, 46)
-  context.lineTo(146, 46)
+  context.moveTo(140, 54)
+  context.lineTo(180, 54)
+  context.lineTo(174, 26)
+  context.lineTo(146, 26)
   context.closePath()
   context.fill()
 
@@ -459,15 +448,9 @@ const drawFurniture = (context: CanvasRenderingContext2D) => {
   context.strokeStyle = 'rgba(200, 170, 100, 0.6)'
   context.lineWidth = 1
   context.beginPath()
-  context.moveTo(140, 74)
-  context.lineTo(180, 74)
+  context.moveTo(140, 54)
+  context.lineTo(180, 54)
   context.stroke()
-
-  // Lamp bulb glow
-  context.fillStyle = '#f0d387'
-  context.beginPath()
-  context.arc(160, 66, 8, 0, Math.PI * 2)
-  context.fill()
 
   // === Small dresser (between bookshelf and window) ===
   // Shadow
@@ -510,11 +493,43 @@ const drawAlarmClock = (context: CanvasRenderingContext2D) => {
   context.fill()
   // Clock face
   context.fillStyle = '#4a8a5a'
-  context.fillRect(262, 213, 16, 10)
-  // Time display
+  context.fillRect(261, 213, 18, 10)
+  // Time display - show real system time
+  const now = new Date()
+  let hours = now.getHours()
+  const minutes = now.getMinutes().toString().padStart(2, '0')
+  hours = hours % 12 || 12
+  const timeStr = `${hours}:${minutes}`
   context.fillStyle = '#7aff7a'
-  context.font = '7px monospace'
-  context.fillText('7:42', 263, 221)
+  context.font = '6px monospace'
+  const textWidth = context.measureText(timeStr).width
+  const faceX = 261
+  const faceW = 18
+  const textX = faceX + (faceW - textWidth) / 2
+  context.fillText(timeStr, textX, 220)
+}
+
+const drawNightstandBody = (context: CanvasRenderingContext2D) => {
+  // Body
+  context.fillStyle = '#4a3020'
+  context.fillRect(240, 230, 60, 42)
+
+  // Drawer
+  context.fillStyle = '#5a3828'
+  context.fillRect(244, 246, 52, 18)
+  // Drawer knob
+  context.fillStyle = '#c4a860'
+  context.beginPath()
+  context.arc(270, 255, 2.5, 0, Math.PI * 2)
+  context.fill()
+
+  // Top surface
+  context.fillStyle = '#5d3824'
+  context.fillRect(236, 222, 68, 12)
+
+  // Top highlight
+  context.fillStyle = 'rgba(255, 220, 160, 0.1)'
+  context.fillRect(236, 222, 68, 3)
 }
 
 const WALK_CYCLE_SPEED = 10
@@ -1055,22 +1070,22 @@ const drawPlayerBack = (
     ? Math.sin(sceneTime * WALK_CYCLE_SPEED * 2) * 2
     : idleEarTwitch()
 
-  // Left ear
+  // Left ear (back view — brown outer ear, no pink inner visible)
   context.fillStyle = '#7a5a34'
   context.beginPath()
   context.ellipse(-10, headY - 8 - earBob * 0.5, 8, 9, -0.2, 0, Math.PI * 2)
   context.fill()
-  context.fillStyle = '#f5aabb'
+  context.fillStyle = '#6b4c2c'
   context.beginPath()
   context.ellipse(-10, headY - 8 - earBob * 0.5, 5.5, 6.5, -0.2, 0, Math.PI * 2)
   context.fill()
 
-  // Right ear
+  // Right ear (back view — brown outer ear, no pink inner visible)
   context.fillStyle = '#7a5a34'
   context.beginPath()
   context.ellipse(10, headY - 8 - earBob, 8, 9, 0.2, 0, Math.PI * 2)
   context.fill()
-  context.fillStyle = '#f5aabb'
+  context.fillStyle = '#6b4c2c'
   context.beginPath()
   context.ellipse(10, headY - 8 - earBob, 5.5, 6.5, 0.2, 0, Math.PI * 2)
   context.fill()
@@ -1426,11 +1441,6 @@ const drawPlayer = (context: CanvasRenderingContext2D, player: PlayerState) => {
   }
 }
 
-// Y threshold below which the alarm clock should render on top of the player.
-// The alarm clock sits on the nightstand surface at y≈226; anything above that
-// (lower Y) means the player is standing behind the clock.
-const ALARM_CLOCK_DEPTH_Y = 228
-
 export const renderScene = (
   context: CanvasRenderingContext2D,
   player: PlayerState,
@@ -1460,10 +1470,13 @@ export const renderScene = (
   drawRug(context)
   drawFurniture(context)
 
-  const playerBehindClock = player.y < ALARM_CLOCK_DEPTH_Y
+  // Depth sorting: nightstand body renders on top when player is behind
+  const NIGHTSTAND_DEPTH_Y = 248
+  const playerBehindNightstand = player.y < NIGHTSTAND_DEPTH_Y
+    && player.x > 210 && player.x < 330
 
-  if (!playerBehindClock) {
-    drawAlarmClock(context)
+  if (!playerBehindNightstand) {
+    drawNightstandBody(context)
   }
 
   // Shadow — wider for quadruped body, breathes slightly
@@ -1479,7 +1492,10 @@ export const renderScene = (
 
   drawPlayer(context, player)
 
-  if (playerBehindClock) {
-    drawAlarmClock(context)
+  if (playerBehindNightstand) {
+    drawNightstandBody(context)
   }
+
+  // Alarm clock always renders in front of the player
+  drawAlarmClock(context)
 }
