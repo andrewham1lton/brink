@@ -517,38 +517,72 @@ const drawAlarmClock = (context: CanvasRenderingContext2D) => {
   context.fillText('7:42', 263, 221)
 }
 
-const drawPlayerShadow = (
-  context: CanvasRenderingContext2D,
-  player: PlayerState,
-) => {
-  context.fillStyle = 'rgba(20, 12, 8, 0.38)'
-  context.beginPath()
-  context.ellipse(player.x, player.y + 26, 18, 8, 0, 0, Math.PI * 2)
-  context.fill()
-}
-
 const WALK_CYCLE_SPEED = 10
 
+// ── Scene time tracking for idle & transition animations ──
+let sceneTime = 0
+let lastFrameTime = 0
+let wasMoving = false
+let stopBounceTimer = 0
+let startSquashTimer = 0
+
+// Pseudo-random but deterministic "twitch" generator so ear/nose
+// twitches feel organic rather than perfectly periodic.
+const twitch = (t: number, freq: number, duty = 0.12): number => {
+  const phase = ((t * freq) % 1 + 1) % 1
+  return phase < duty ? Math.sin(phase / duty * Math.PI) : 0
+}
+
+// ── Idle animation helpers ──
+const idleBreath = (): number =>
+  Math.sin(sceneTime * 2.2) * 0.6                // gentle torso pulse
+
+const idleTailSway = (): number =>
+  Math.sin(sceneTime * 1.6) * 6                  // slow tail wag
+
+const idleEarTwitch = (): number =>
+  twitch(sceneTime, 0.45, 0.08) * 3              // occasional ear flick
+
+const idleNoseWiggle = (): number =>
+  twitch(sceneTime, 0.7, 0.14) * 1.8             // periodic nose bob
+
+// Blink: closed for a tiny window every ~3-4 seconds
+const isBlinking = (): boolean => {
+  const period = 3.4
+  const phase = ((sceneTime / period) % 1 + 1) % 1
+  return phase < 0.045
+}
+
 // Shared rat head parts for the side-facing view
-const drawRatHeadSide = (context: CanvasRenderingContext2D) => {
+const drawRatHeadSide = (context: CanvasRenderingContext2D, moving: boolean) => {
+  const earBob = moving
+    ? Math.sin(sceneTime * WALK_CYCLE_SPEED * 2) * 2  // bounce with steps
+    : idleEarTwitch()
+  const noseWob = moving ? 0 : idleNoseWiggle()
+  const blink = !moving && isBlinking()
+  // Whiskers spread outward slightly when sniffing (idle)
+  const whiskerSpread = moving
+    ? Math.sin(sceneTime * WALK_CYCLE_SPEED) * 1
+    : twitch(sceneTime, 0.7, 0.14) * 2.5
+
   // Ear (back)
   context.fillStyle = '#7a5a34'
   context.beginPath()
-  context.arc(-3, -35, 8, 0, Math.PI * 2)
+  context.arc(-3, -35 - earBob * 0.5, 8, 0, Math.PI * 2)
   context.fill()
   context.fillStyle = '#f0a0b0'
   context.beginPath()
-  context.arc(-3, -35, 5.5, 0, Math.PI * 2)
+  context.arc(-3, -35 - earBob * 0.5, 5.5, 0, Math.PI * 2)
   context.fill()
 
   // Ear (front)
   context.fillStyle = '#7a5a34'
   context.beginPath()
-  context.arc(6, -37, 7, 0, Math.PI * 2)
+  context.arc(6, -37 - earBob, 7, 0, Math.PI * 2)
   context.fill()
   context.fillStyle = '#f0a0b0'
   context.beginPath()
-  context.arc(6, -37, 4.5, 0, Math.PI * 2)
+  context.arc(6, -37 - earBob, 4.5, 0, Math.PI * 2)
   context.fill()
 
   // Head
@@ -560,40 +594,51 @@ const drawRatHeadSide = (context: CanvasRenderingContext2D) => {
   // Snout
   context.fillStyle = '#b09070'
   context.beginPath()
-  context.ellipse(15, -22, 7, 5, -0.1, 0, Math.PI * 2)
+  context.ellipse(15, -22 + noseWob, 7, 5, -0.1, 0, Math.PI * 2)
   context.fill()
 
-  // Nose
+  // Nose — wiggles up/down when idle
   context.fillStyle = '#e87878'
   context.beginPath()
-  context.arc(21, -22, 2.5, 0, Math.PI * 2)
+  context.arc(21, -22 + noseWob, 2.5, 0, Math.PI * 2)
   context.fill()
   context.fillStyle = 'rgba(255, 210, 210, 0.6)'
   context.beginPath()
-  context.arc(20, -23, 0.9, 0, Math.PI * 2)
+  context.arc(20, -23 + noseWob, 0.9, 0, Math.PI * 2)
   context.fill()
 
-  // Eye
-  context.fillStyle = '#0d0808'
-  context.beginPath()
-  context.arc(10, -28, 3.2, 0, Math.PI * 2)
-  context.fill()
-  context.fillStyle = 'rgba(255, 255, 255, 0.75)'
-  context.beginPath()
-  context.arc(11, -29, 1.1, 0, Math.PI * 2)
-  context.fill()
+  // Eye — blinks when idle
+  if (blink) {
+    // Closed eye — cute little line
+    context.strokeStyle = '#0d0808'
+    context.lineWidth = 1.8
+    context.lineCap = 'round'
+    context.beginPath()
+    context.moveTo(7, -28)
+    context.lineTo(13, -28)
+    context.stroke()
+  } else {
+    context.fillStyle = '#0d0808'
+    context.beginPath()
+    context.arc(10, -28, 3.2, 0, Math.PI * 2)
+    context.fill()
+    context.fillStyle = 'rgba(255, 255, 255, 0.75)'
+    context.beginPath()
+    context.arc(11, -29, 1.1, 0, Math.PI * 2)
+    context.fill()
+  }
 
-  // Whiskers
+  // Whiskers — flutter when sniffing, sway when walking
   context.strokeStyle = 'rgba(220, 200, 170, 0.75)'
   context.lineWidth = 0.9
   context.lineCap = 'round'
   context.beginPath()
   context.moveTo(14, -24)
-  context.lineTo(28, -28)
+  context.lineTo(28, -28 - whiskerSpread)
   context.moveTo(14, -23)
   context.lineTo(28, -22)
   context.moveTo(14, -21)
-  context.lineTo(28, -17)
+  context.lineTo(28, -17 + whiskerSpread)
   context.stroke()
 }
 
@@ -608,19 +653,47 @@ const drawPlayerSide = (
   const bob = player.moving
     ? Math.abs(Math.sin(player.animationTime * WALK_CYCLE_SPEED * 2)) * 2
     : 0
+  const breath = player.moving ? 0 : idleBreath()
   const flip = player.facing === 'left' ? -1 : 1
 
-  context.save()
-  context.translate(player.x, player.y - bob)
-  context.scale(flip, 1)
+  // Stop-bounce: quick settle when coming to a halt
+  const stopBounce = stopBounceTimer > 0
+    ? Math.sin(stopBounceTimer * 14) * stopBounceTimer * 6
+    : 0
+  // Start-squash: lean forward slightly at start
+  const startSquash = startSquashTimer > 0
+    ? Math.sin(startSquashTimer * 12) * startSquashTimer * 0.04
+    : 0
 
-  // Tail — behind body, swings with walk
+  context.save()
+  context.translate(player.x, player.y - bob - stopBounce)
+
+  // Squash-stretch on start/stop
+  if (startSquash > 0) {
+    context.scale(flip * (1 + startSquash), 1 - startSquash * 0.6)
+  } else {
+    context.scale(flip, 1)
+  }
+
+  // Tail — more expressive S-curve, sways when idle
+  const tailCycle = player.moving ? cycle : 0
+  const tailIdle = player.moving ? 0 : idleTailSway()
   context.strokeStyle = '#c49a7a'
   context.lineWidth = 2.5
   context.lineCap = 'round'
   context.beginPath()
   context.moveTo(-10, -4)
-  context.bezierCurveTo(-28, 0, -34, -10 + cycle * 4, -26, -20 + cycle * 5)
+  context.bezierCurveTo(
+    -24, 2 + tailIdle * 0.3,
+    -34, -6 + tailCycle * 5 + tailIdle * 0.6,
+    -22, -22 + tailCycle * 6 + tailIdle,
+  )
+  context.stroke()
+  // Tail tip — little curl at the end
+  const tipX = -22 + tailCycle * 2 + tailIdle * 0.4
+  const tipY = -22 + tailCycle * 6 + tailIdle
+  context.beginPath()
+  context.bezierCurveTo(tipX, tipY, tipX + 4, tipY - 6, tipX + 2, tipY - 10)
   context.stroke()
 
   // Legs
@@ -635,7 +708,7 @@ const drawPlayerSide = (
   context.lineTo(6 - legSwing, 22)
   context.stroke()
 
-  // Feet
+  // Feet — tiny toe beans visible on idle
   context.fillStyle = '#5a3a1a'
   context.beginPath()
   context.ellipse(-6 + legSwing, 25, 6, 3.5, 0.2, 0, Math.PI * 2)
@@ -644,41 +717,58 @@ const drawPlayerSide = (
   context.ellipse(6 - legSwing, 25, 6, 3.5, -0.2, 0, Math.PI * 2)
   context.fill()
 
-  // Torso
+  // Toe beans (show when idle)
+  if (!player.moving) {
+    context.fillStyle = '#e8a0a0'
+    for (const fx of [-6, 6]) {
+      for (let t = -1; t <= 1; t++) {
+        context.beginPath()
+        context.arc(fx + t * 2.2, 24.5, 1, 0, Math.PI * 2)
+        context.fill()
+      }
+    }
+  }
+
+  // Torso — breathes when idle
   context.fillStyle = '#8a6a44'
   context.beginPath()
-  context.roundRect(-13, -14, 26, 22, 8)
+  context.roundRect(-13, -14 - breath * 0.3, 26, 22 + breath * 0.6, 8)
   context.fill()
 
-  // Belly patch
+  // Belly patch — breathes in sync
   context.fillStyle = '#c8a882'
   context.beginPath()
-  context.roundRect(-7, -10, 14, 16, 6)
+  context.roundRect(-7, -10 - breath * 0.2, 14, 16 + breath * 0.4, 6)
   context.fill()
 
   // Arms
   const armSwing = cycle * 10
+  const armIdle = player.moving ? 0 : Math.sin(sceneTime * 1.8) * 1.5
   context.strokeStyle = '#7a5a34'
   context.lineWidth = 6
   context.lineCap = 'round'
   context.beginPath()
   context.moveTo(-14, -8)
-  context.lineTo(-22, 4 - armSwing)
+  context.lineTo(-22, 4 - armSwing + armIdle)
   context.moveTo(14, -8)
-  context.lineTo(22, 4 + armSwing)
+  context.lineTo(22, 4 + armSwing - armIdle)
   context.stroke()
 
-  // Hands
+  // Hands — small paws
   context.fillStyle = '#c8a882'
   context.beginPath()
-  context.arc(-22, 4 - armSwing, 4, 0, Math.PI * 2)
+  context.arc(-22, 4 - armSwing + armIdle, 4, 0, Math.PI * 2)
   context.fill()
   context.beginPath()
-  context.arc(22, 4 + armSwing, 4, 0, Math.PI * 2)
+  context.arc(22, 4 + armSwing - armIdle, 4, 0, Math.PI * 2)
   context.fill()
 
-  // Rat head (side view)
-  drawRatHeadSide(context)
+  // Rat head (side view) — slight head-bob when walking
+  if (player.moving) {
+    const headBob = Math.sin(player.animationTime * WALK_CYCLE_SPEED * 2) * 1.2
+    context.translate(0, -headBob * 0.5)
+  }
+  drawRatHeadSide(context, player.moving)
 
   context.restore()
 }
@@ -695,24 +785,30 @@ const drawPlayerBack = (
   const bob = player.moving
     ? Math.abs(Math.sin(player.animationTime * WALK_CYCLE_SPEED * 2)) * 2
     : 0
+  const breath = player.moving ? 0 : idleBreath()
+
+  const stopBounce = stopBounceTimer > 0
+    ? Math.sin(stopBounceTimer * 14) * stopBounceTimer * 6
+    : 0
 
   context.save()
-  context.translate(player.x, player.y - bob)
+  context.translate(player.x, player.y - bob - stopBounce)
   // Mirror the whole sprite for up-left
   if (lean === -1) context.scale(-1, 1)
 
   const diagonal = lean !== 0
 
-  // Tail — hangs from base of spine, curls to the side
+  // Tail — hangs from base of spine, curls to the side; sways when idle
+  const tailIdle = player.moving ? 0 : idleTailSway()
   context.strokeStyle = '#c49a7a'
   context.lineWidth = 2.5
   context.lineCap = 'round'
   context.beginPath()
   context.moveTo(diagonal ? 4 : 0, 2)
   if (diagonal) {
-    context.bezierCurveTo(20, 8, 28, 0, 22, -10)
+    context.bezierCurveTo(20, 8 + tailIdle * 0.2, 28, 0 + cycle * 4, 22, -10 + cycle * 5 + tailIdle * 0.5)
   } else {
-    context.bezierCurveTo(-18, 8, -26, 0, -20, -10)
+    context.bezierCurveTo(-18, 8 + tailIdle * 0.3, -26, 0 + cycle * 4, -20, -10 + cycle * 5 + tailIdle * 0.6)
   }
   context.stroke()
 
@@ -737,10 +833,22 @@ const drawPlayerBack = (
   context.ellipse(6 - legSwing, 25, 6, 3.5, -0.2, 0, Math.PI * 2)
   context.fill()
 
-  // Torso (back — slightly darker, no belly patch)
+  // Toe beans (idle)
+  if (!player.moving) {
+    context.fillStyle = '#e8a0a0'
+    for (const fx of [-6, 6]) {
+      for (let t = -1; t <= 1; t++) {
+        context.beginPath()
+        context.arc(fx + t * 2.2, 24.5, 1, 0, Math.PI * 2)
+        context.fill()
+      }
+    }
+  }
+
+  // Torso (back — breathes when idle)
   context.fillStyle = '#7a5a38'
   context.beginPath()
-  context.roundRect(-13, -14, 26, 22, 8)
+  context.roundRect(-13, -14 - breath * 0.3, 26, 22 + breath * 0.6, 8)
   context.fill()
 
   // Back fur stripe
@@ -751,71 +859,94 @@ const drawPlayerBack = (
 
   // Arms
   const armSwing = cycle * 10
+  const armIdle = player.moving ? 0 : Math.sin(sceneTime * 1.8) * 1.5
   context.strokeStyle = '#7a5a34'
   context.lineWidth = 6
   context.lineCap = 'round'
   context.beginPath()
   context.moveTo(-14, -8)
-  context.lineTo(-22, 4 - armSwing)
+  context.lineTo(-22, 4 - armSwing + armIdle)
   context.moveTo(14, -8)
-  context.lineTo(22, 4 + armSwing)
+  context.lineTo(22, 4 + armSwing - armIdle)
   context.stroke()
 
   // Hands
   context.fillStyle = '#c8a882'
   context.beginPath()
-  context.arc(-22, 4 - armSwing, 4, 0, Math.PI * 2)
+  context.arc(-22, 4 - armSwing + armIdle, 4, 0, Math.PI * 2)
   context.fill()
   context.beginPath()
-  context.arc(22, 4 + armSwing, 4, 0, Math.PI * 2)
+  context.arc(22, 4 + armSwing - armIdle, 4, 0, Math.PI * 2)
   context.fill()
 
-  // Head (back of head)
+  // Head (back of head) — subtle bob when walking
+  const headBobBack = player.moving
+    ? Math.sin(player.animationTime * WALK_CYCLE_SPEED * 2) * 1
+    : 0
   const headX = diagonal ? 3 : 0
   context.fillStyle = '#9a7a54'
   context.beginPath()
-  context.arc(headX, -26, 12, 0, Math.PI * 2)
+  context.arc(headX, -26 - headBobBack, 12, 0, Math.PI * 2)
   context.fill()
+
+  // Ear bounce/twitch
+  const earBob = player.moving
+    ? Math.sin(sceneTime * WALK_CYCLE_SPEED * 2) * 2
+    : idleEarTwitch()
 
   // Left ear (from behind)
   context.fillStyle = '#7a5a34'
   context.beginPath()
-  context.arc(headX - 10, -36, 8, 0, Math.PI * 2)
+  context.arc(headX - 10, -36 - headBobBack - earBob * 0.5, 8, 0, Math.PI * 2)
   context.fill()
   context.fillStyle = '#f0a0b0'
   context.beginPath()
-  context.arc(headX - 10, -36, 5.5, 0, Math.PI * 2)
+  context.arc(headX - 10, -36 - headBobBack - earBob * 0.5, 5.5, 0, Math.PI * 2)
   context.fill()
 
   // Right ear (from behind)
   context.fillStyle = '#7a5a34'
   context.beginPath()
-  context.arc(headX + 10, -36, 8, 0, Math.PI * 2)
+  context.arc(headX + 10, -36 - headBobBack - earBob, 8, 0, Math.PI * 2)
   context.fill()
   context.fillStyle = '#f0a0b0'
   context.beginPath()
-  context.arc(headX + 10, -36, 5.5, 0, Math.PI * 2)
+  context.arc(headX + 10, -36 - headBobBack - earBob, 5.5, 0, Math.PI * 2)
   context.fill()
 
   // For diagonal: hint of near eye and whiskers peeking around the cheek
   if (diagonal) {
-    context.fillStyle = '#0d0808'
-    context.beginPath()
-    context.arc(headX + 10, -24, 2.5, 0, Math.PI * 2)
-    context.fill()
-    context.fillStyle = 'rgba(255, 255, 255, 0.7)'
-    context.beginPath()
-    context.arc(headX + 11, -25, 0.8, 0, Math.PI * 2)
-    context.fill()
+    const blink = !player.moving && isBlinking()
+    if (blink) {
+      context.strokeStyle = '#0d0808'
+      context.lineWidth = 1.5
+      context.lineCap = 'round'
+      context.beginPath()
+      context.moveTo(headX + 8, -24 - headBobBack)
+      context.lineTo(headX + 12, -24 - headBobBack)
+      context.stroke()
+    } else {
+      context.fillStyle = '#0d0808'
+      context.beginPath()
+      context.arc(headX + 10, -24 - headBobBack, 2.5, 0, Math.PI * 2)
+      context.fill()
+      context.fillStyle = 'rgba(255, 255, 255, 0.7)'
+      context.beginPath()
+      context.arc(headX + 11, -25 - headBobBack, 0.8, 0, Math.PI * 2)
+      context.fill()
+    }
 
+    const whiskerSpread = player.moving
+      ? Math.sin(sceneTime * WALK_CYCLE_SPEED) * 1
+      : twitch(sceneTime, 0.7, 0.14) * 2
     context.strokeStyle = 'rgba(220, 200, 170, 0.5)'
     context.lineWidth = 0.8
     context.lineCap = 'round'
     context.beginPath()
-    context.moveTo(headX + 14, -22)
-    context.lineTo(headX + 24, -19)
-    context.moveTo(headX + 14, -21)
-    context.lineTo(headX + 24, -25)
+    context.moveTo(headX + 14, -22 - headBobBack)
+    context.lineTo(headX + 24, -19 + whiskerSpread - headBobBack)
+    context.moveTo(headX + 14, -21 - headBobBack)
+    context.lineTo(headX + 24, -25 - whiskerSpread - headBobBack)
     context.stroke()
   }
 
@@ -843,6 +974,25 @@ export const renderScene = (
   context: CanvasRenderingContext2D,
   player: PlayerState,
 ) => {
+  // Track scene-level time for idle animations & transitions
+  const now = performance.now() / 1000
+  const dt = lastFrameTime > 0 ? Math.min(now - lastFrameTime, 0.05) : 0
+  lastFrameTime = now
+  sceneTime += dt
+
+  // Detect start/stop transitions
+  if (player.moving && !wasMoving) {
+    startSquashTimer = 0.2   // anticipation squash
+  }
+  if (!player.moving && wasMoving) {
+    stopBounceTimer = 0.35   // settle bounce
+  }
+  wasMoving = player.moving
+
+  // Decay transition timers
+  if (stopBounceTimer > 0) stopBounceTimer = Math.max(0, stopBounceTimer - dt * 2.5)
+  if (startSquashTimer > 0) startSquashTimer = Math.max(0, startSquashTimer - dt * 3)
+
   context.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
 
   drawBackdrop(context)
@@ -855,7 +1005,17 @@ export const renderScene = (
     drawAlarmClock(context)
   }
 
-  drawPlayerShadow(context, player)
+  // Shadow breathes slightly with the rat
+  const shadowBreath = player.moving ? 0 : idleBreath() * 0.3
+  context.fillStyle = 'rgba(20, 12, 8, 0.38)'
+  context.beginPath()
+  context.ellipse(
+    player.x, player.y + 26,
+    18 + shadowBreath, 8 + shadowBreath * 0.3,
+    0, 0, Math.PI * 2,
+  )
+  context.fill()
+
   drawPlayer(context, player)
 
   if (playerBehindClock) {
