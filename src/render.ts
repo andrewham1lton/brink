@@ -691,47 +691,58 @@ const isBlinking = (): boolean => {
   return phase < 0.045
 }
 
+// ── Fluid tail simulation — pure verlet rope physics ──
+// No target-chasing. The tail is a chain of particles held together
+// by distance constraints, acted on by gravity, player-drag, and a
+// gentle rest-shape bias. This gives it a genuinely fluid, reactive feel.
+
 type TailPose = 'back' | 'front' | 'side'
 
-interface TailPoint {
-  x: number
-  y: number
-}
+interface TailPoint { x: number; y: number }
 
 interface TailNode extends TailPoint {
-  previousX: number
-  previousY: number
+  prevX: number
+  prevY: number
 }
 
-interface TailProfile {
-  anchor: TailPoint
-  bias: TailPoint
-  direction: TailPoint
-  gravity: TailPoint
-  phase: number
+interface TailAnchorProfile {
+  anchorX: number
+  anchorY: number
+  // Rest direction the tail naturally curves toward (local-space)
+  restAngle: number
+  restCurl: number      // how much the rest shape curls (radians over full length)
+  gravityX: number
+  gravityY: number
+  poseBlend: number
   segmentLength: number
-  swayAmplitude: number
+  restStrength: number
+  swayAmp: number
 }
 
 interface TailState {
   initialized: boolean
   lastPlayerX: number
   lastPlayerY: number
-  lastVelocityX: number
-  lastVelocityY: number
+  smoothVX: number
+  smoothVY: number
   nodes: TailNode[]
   pose: TailPose
 }
 
-const TAIL_NODE_COUNT = 22
-const TAIL_CONSTRAINT_PASSES = 8
+const TAIL_NODES = 14
+const TAIL_DAMPING = 0.04
+const TAIL_GRAVITY_SCALE = 280
+const TAIL_CONSTRAINT_ITERS = 4
+const TAIL_IDLE_SWAY_SPEED = 2.2
+const TAIL_DRAG_FACTOR = 0.56      // how much player movement drags the tail
+const TAIL_WHIP_FACTOR = 0.07      // acceleration whip
 
 const tailState: TailState = {
   initialized: false,
   lastPlayerX: 0,
   lastPlayerY: 0,
-  lastVelocityX: 0,
-  lastVelocityY: 0,
+  smoothVX: 0,
+  smoothVY: 0,
   nodes: [],
   pose: 'side',
 }
@@ -739,31 +750,16 @@ const tailState: TailState = {
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(Math.max(value, min), max)
 
-const lerp = (start: number, end: number, t: number): number =>
-  start + (end - start) * t
-
-const normalize = (point: TailPoint): TailPoint => {
-  const length = Math.hypot(point.x, point.y)
-  if (length === 0) {
-    return { x: 0, y: 0 }
-  }
-  return { x: point.x / length, y: point.y / length }
-}
-
-const pointAlong = (point: TailPoint, direction: TailPoint, distance: number): TailPoint => ({
-  x: point.x + direction.x * distance,
-  y: point.y + direction.y * distance,
-})
+const lerp = (a: number, b: number, t: number): number =>
+  a + (b - a) * t
 
 const getTailPose = (player: PlayerState): TailPose => {
   if (player.facing === 'up' || player.facing === 'up-left' || player.facing === 'up-right') {
     return 'back'
   }
-
   if (player.facing === 'down' || player.facing === 'down-left' || player.facing === 'down-right') {
     return 'front'
   }
-
   return 'side'
 }
 
@@ -772,342 +768,279 @@ const getTailMirror = (player: PlayerState): -1 | 1 =>
     ? -1
     : 1
 
-const TAIL_PROFILES: Record<TailPose, TailProfile> = {
+// Anchor positions and rest-shape per pose (in local draw-space)
+const TAIL_ANCHORS: Record<TailPose, TailAnchorProfile> = {
+  side: {
+    anchorX: -18, anchorY: -2,
+    restAngle: -2.34,     // points back-and-up
+    restCurl: 0.82,       // softer curl to avoid a hook-shaped tip
+    gravityX: 0.05,
+    gravityY: 0.26,
+    poseBlend: 0.24,
+    segmentLength: 3.2,
+    restStrength: 0.009,
+    swayAmp: 1.05,
+  },
   back: {
-    anchor: { x: 0, y: 8 },
-    bias: { x: 1.5, y: 2.4 },
-    direction: normalize({ x: 0.08, y: 1 }),
-    gravity: { x: 0, y: 0.4 },
-    phase: 1.4,
-    segmentLength: 4.05,
-    swayAmplitude: 2.4,
+    anchorX: 0, anchorY: 8,
+    restAngle: Math.PI * 0.45, // hangs closer to the spine before drifting
+    restCurl: 0.72,            // keeps the back view from looking like a rigid hook
+    gravityX: 0,
+    gravityY: 0.3,
+    poseBlend: 0.36,
+    segmentLength: 2.6,
+    restStrength: 0.012,
+    swayAmp: 0.52,
   },
   front: {
-    anchor: { x: -3, y: -8 },
-    bias: { x: -2.2, y: -6.8 },
-    direction: normalize({ x: -0.12, y: -1 }),
-    gravity: { x: 0.02, y: -0.08 },
-    phase: 0.7,
-    segmentLength: 4.1,
-    swayAmplitude: 1.9,
-  },
-  side: {
-    anchor: { x: -18, y: -2 },
-    bias: { x: -5.2, y: -7.8 },
-    direction: normalize({ x: -0.84, y: -0.54 }),
-    gravity: { x: 0.03, y: 0.28 },
-    phase: 0,
-    segmentLength: 4.35,
-    swayAmplitude: 3.4,
+    anchorX: -3, anchorY: -8,
+    restAngle: -1.78,          // tucks behind the body instead of shooting straight out
+    restCurl: 0.72,
+    gravityX: 0.02,
+    gravityY: 0.08,
+    poseBlend: 0.38,
+    segmentLength: 2.5,
+    restStrength: 0.012,
+    swayAmp: 0.48,
   },
 }
 
-const getTailGuidePoint = (
-  profile: TailProfile,
-  smoothedVelocity: TailPoint,
-  acceleration: TailPoint,
-  index: number,
-  moving: boolean,
-  speedRatio: number,
-  poseChanged: boolean,
-): TailPoint => {
-  const t = index / (TAIL_NODE_COUNT - 1)
-  const lagWeight = Math.pow(t, 1.18)
-  const distance = profile.segmentLength * index
-  const normal = { x: -profile.direction.y, y: profile.direction.x }
-  const waveSpeed = moving ? 10.2 : 4.1
-  const baseWave =
-    Math.sin(sceneTime * waveSpeed - t * 10.5 + profile.phase)
-    * (0.45 + speedRatio * profile.swayAmplitude)
-    * lagWeight
-  const shimmer =
-    Math.sin(sceneTime * 2.8 + t * 13 + profile.phase)
-    * (0.22 + lagWeight * 0.4)
-  const whip =
-    Math.sin(sceneTime * 12.5 - t * 16 + profile.phase)
-    * clamp(Math.hypot(acceleration.x, acceleration.y) / 90, 0, 2.4)
-    * Math.pow(t, 2.2)
-  const posePulse = poseChanged
-    ? Math.sin(sceneTime * 8 + t * 7) * 0.8 * lagWeight
-    : 0
-  const drag = {
-    x: clamp(-smoothedVelocity.x * 0.014, -8, 8),
-    y: clamp(-smoothedVelocity.y * 0.014, -8, 8),
+const initTailNodes = (profile: TailAnchorProfile): TailNode[] => {
+  const nodes: TailNode[] = []
+  let x = profile.anchorX
+  let y = profile.anchorY
+  for (let i = 0; i < TAIL_NODES; i++) {
+    nodes.push({ x, y, prevX: x, prevY: y })
+    const t = i / (TAIL_NODES - 1)
+    const angle = profile.restAngle + profile.restCurl * t
+    x += Math.cos(angle) * profile.segmentLength
+    y += Math.sin(angle) * profile.segmentLength
   }
-  const snap = {
-    x: clamp(-acceleration.x * 0.0025, -6, 6),
-    y: clamp(-acceleration.y * 0.0025, -6, 6),
-  }
-  const basePoint = pointAlong(profile.anchor, profile.direction, distance)
-
-  return {
-    x:
-      basePoint.x
-      + profile.bias.x * lagWeight
-      + profile.gravity.x * lagWeight * 18
-      + drag.x * lagWeight * 2.8
-      + snap.x * Math.pow(t, 1.8)
-      + normal.x * (baseWave + shimmer + whip + posePulse),
-    y:
-      basePoint.y
-      + profile.bias.y * lagWeight
-      + profile.gravity.y * lagWeight * 18
-      + drag.y * lagWeight * 2.8
-      + snap.y * Math.pow(t, 1.8)
-      + normal.y * (baseWave + shimmer + whip + posePulse),
-  }
+  return nodes
 }
 
-const buildTailTargets = (
-  player: PlayerState,
-  pose: TailPose,
-  smoothedVelocity: TailPoint,
-  acceleration: TailPoint,
-  poseChanged: boolean,
-): TailPoint[] => {
-  const profile = TAIL_PROFILES[pose]
-  const speedRatio = clamp(Math.hypot(smoothedVelocity.x, smoothedVelocity.y) / player.speed, 0, 1.4)
+const reposeTailNodes = (profile: TailAnchorProfile, nodes: TailNode[]) => {
+  const targetNodes = initTailNodes(profile)
 
-  return Array.from({ length: TAIL_NODE_COUNT }, (_, index) => (
-    index === 0
-      ? profile.anchor
-      : getTailGuidePoint(
-        profile,
-        smoothedVelocity,
-        acceleration,
-        index,
-        player.moving,
-        speedRatio,
-        poseChanged,
-      )
-  ))
-}
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i]
+    const target = targetNodes[i]
+    const t = i / (nodes.length - 1)
+    const blend = i === 0 ? 1 : lerp(profile.poseBlend, profile.poseBlend * 0.46, t)
 
-const resetTail = (
-  targets: TailPoint[],
-  player: PlayerState,
-  pose: TailPose,
-  localVelocity: TailPoint = { x: 0, y: 0 },
-) => {
-  tailState.nodes = targets.map((target) => ({
-    x: target.x,
-    y: target.y,
-    previousX: target.x,
-    previousY: target.y,
-  }))
-  tailState.initialized = true
-  tailState.lastPlayerX = player.x
-  tailState.lastPlayerY = player.y
-  tailState.lastVelocityX = localVelocity.x
-  tailState.lastVelocityY = localVelocity.y
-  tailState.pose = pose
+    node.x = lerp(node.x, target.x, blend)
+    node.y = lerp(node.y, target.y, blend)
+    node.prevX = lerp(node.prevX, node.x, 0.45)
+    node.prevY = lerp(node.prevY, node.y, 0.45)
+  }
 }
 
 const updateTailSimulation = (player: PlayerState, dt: number) => {
   const pose = getTailPose(player)
+  const profile = TAIL_ANCHORS[pose]
 
   if (player.inBed) {
     tailState.initialized = false
     tailState.lastPlayerX = player.x
     tailState.lastPlayerY = player.y
-    tailState.lastVelocityX = 0
-    tailState.lastVelocityY = 0
+    tailState.smoothVX = 0
+    tailState.smoothVY = 0
     return
   }
 
   if (!tailState.initialized || dt <= 0) {
-    resetTail(buildTailTargets(player, pose, { x: 0, y: 0 }, { x: 0, y: 0 }, false), player, pose)
+    tailState.nodes = initTailNodes(profile)
+    tailState.initialized = true
+    tailState.lastPlayerX = player.x
+    tailState.lastPlayerY = player.y
+    tailState.smoothVX = 0
+    tailState.smoothVY = 0
+    tailState.pose = pose
     return
   }
 
   const mirror = getTailMirror(player)
-  const localVelocity = {
-    x: clamp(((player.x - tailState.lastPlayerX) / dt) * mirror, -320, 320),
-    y: clamp((player.y - tailState.lastPlayerY) / dt, -320, 320),
-  }
-  const smoothedVelocity = {
-    x: lerp(tailState.lastVelocityX, localVelocity.x, 0.28),
-    y: lerp(tailState.lastVelocityY, localVelocity.y, 0.28),
-  }
-  const acceleration = {
-    x: localVelocity.x - tailState.lastVelocityX,
-    y: localVelocity.y - tailState.lastVelocityY,
-  }
-  const poseChanged = tailState.pose !== pose
-  const targets = buildTailTargets(player, pose, smoothedVelocity, acceleration, poseChanged)
 
-  if (tailState.nodes.length !== targets.length) {
-    resetTail(targets, player, pose, smoothedVelocity)
-    return
+  // Compute player velocity in local space (mirrored so tail reacts correctly)
+  const rawVX = clamp(((player.x - tailState.lastPlayerX) / dt) * mirror, -400, 400)
+  const rawVY = clamp((player.y - tailState.lastPlayerY) / dt, -400, 400)
+  const smoothVX = lerp(tailState.smoothVX, rawVX, 0.3)
+  const smoothVY = lerp(tailState.smoothVY, rawVY, 0.3)
+  const accelX = rawVX - tailState.smoothVX
+  const accelY = rawVY - tailState.smoothVY
+
+  // Keep momentum through facing changes instead of snapping to a new tail.
+  if (tailState.pose !== pose) {
+    reposeTailNodes(profile, tailState.nodes)
+    tailState.pose = pose
   }
 
-  const frameScale = clamp(dt * 60, 0.55, 1.7)
-  const inertia = player.moving ? 0.84 : 0.78
+  const nodes = tailState.nodes
+  const n = nodes.length
 
-  tailState.nodes[0].x = targets[0].x
-  tailState.nodes[0].y = targets[0].y
-  tailState.nodes[0].previousX = targets[0].x
-  tailState.nodes[0].previousY = targets[0].y
+  // ── Pin root to anchor ──
+  nodes[0].prevX = nodes[0].x
+  nodes[0].prevY = nodes[0].y
+  nodes[0].x = profile.anchorX
+  nodes[0].y = profile.anchorY
 
-  for (let index = 1; index < tailState.nodes.length; index += 1) {
-    const node = tailState.nodes[index]
-    const velocityX = (node.x - node.previousX) * inertia
-    const velocityY = (node.y - node.previousY) * inertia
-    const lag = index / (tailState.nodes.length - 1)
-    const attraction = (0.13 + lag * 0.11 + (poseChanged ? 0.08 : 0)) * frameScale
+  // ── Verlet integration ──
+  for (let i = 1; i < n; i++) {
+    const nd = nodes[i]
+    let vx = (nd.x - nd.prevX) * (1 - TAIL_DAMPING)
+    let vy = (nd.y - nd.prevY) * (1 - TAIL_DAMPING)
 
-    node.previousX = node.x
-    node.previousY = node.y
-    node.x += velocityX + (targets[index].x - node.x) * attraction
-    node.y += velocityY + (targets[index].y - node.y) * attraction
+    const t = i / (n - 1)  // 0 at root, 1 at tip
+    const tipWeight = t * t // tip reacts more
+
+    // Gravity
+    vx += profile.gravityX * TAIL_GRAVITY_SCALE * dt * dt
+    vy += profile.gravityY * TAIL_GRAVITY_SCALE * dt * dt
+
+    // Drag from player movement — tail trails behind
+    vx -= smoothVX * TAIL_DRAG_FACTOR * tipWeight * dt
+    vy -= smoothVY * TAIL_DRAG_FACTOR * tipWeight * dt
+
+    // Acceleration whip — sudden direction changes ripple outward
+    vx -= accelX * TAIL_WHIP_FACTOR * tipWeight * dt
+    vy -= accelY * TAIL_WHIP_FACTOR * tipWeight * dt
+
+    // Idle sway — cascading sine wave for organic breathing
+    const swayPhase = sceneTime * TAIL_IDLE_SWAY_SPEED + i * 0.55
+    const sway = Math.sin(swayPhase) * profile.swayAmp * t
+    const sway2 = Math.sin(swayPhase * 1.7 + 2.1) * profile.swayAmp * 0.3 * t
+    vx += (sway + sway2) * dt
+
+    // Very gentle rest-shape spring (barely noticeable, keeps tail from going crazy)
+    const restT = i / (n - 1)
+    const restAngle = profile.restAngle + profile.restCurl * restT
+    const restX = nodes[i - 1].x + Math.cos(restAngle) * profile.segmentLength
+    const restY = nodes[i - 1].y + Math.sin(restAngle) * profile.segmentLength
+    vx += (restX - nd.x) * profile.restStrength
+    vy += (restY - nd.y) * profile.restStrength
+
+    nd.prevX = nd.x
+    nd.prevY = nd.y
+    nd.x += vx
+    nd.y += vy
   }
 
-  const segmentLength = TAIL_PROFILES[pose].segmentLength
+  // ── Distance constraints ──
+  for (let iter = 0; iter < TAIL_CONSTRAINT_ITERS; iter++) {
+    // Re-pin root
+    nodes[0].x = profile.anchorX
+    nodes[0].y = profile.anchorY
 
-  for (let pass = 0; pass < TAIL_CONSTRAINT_PASSES; pass += 1) {
-    tailState.nodes[0].x = targets[0].x
-    tailState.nodes[0].y = targets[0].y
+    for (let i = 0; i < n - 1; i++) {
+      const a = nodes[i]
+      const b = nodes[i + 1]
+      const dx = b.x - a.x
+      const dy = b.y - a.y
+      const dist = Math.hypot(dx, dy) || 0.001
+      const diff = (dist - profile.segmentLength) / dist * 0.5
 
-    for (let index = 1; index < tailState.nodes.length; index += 1) {
-      const current = tailState.nodes[index]
-      const previous = tailState.nodes[index - 1]
-      const dx = current.x - previous.x
-      const dy = current.y - previous.y
-      const distance = Math.hypot(dx, dy) || 0.0001
-      const difference = (distance - segmentLength) / distance
-
-      if (index === 1) {
-        current.x -= dx * difference
-        current.y -= dy * difference
+      if (i === 0) {
+        // Root is fixed
+        b.x -= dx * diff * 2
+        b.y -= dy * diff * 2
       } else {
-        current.x -= dx * difference * 0.56
-        current.y -= dy * difference * 0.56
-        previous.x += dx * difference * 0.44
-        previous.y += dy * difference * 0.44
+        a.x += dx * diff
+        a.y += dy * diff
+        b.x -= dx * diff
+        b.y -= dy * diff
       }
-    }
-
-    for (let index = 1; index < tailState.nodes.length; index += 1) {
-      const settle = 0.02 + index * 0.0016
-      tailState.nodes[index].x += (targets[index].x - tailState.nodes[index].x) * settle
-      tailState.nodes[index].y += (targets[index].y - tailState.nodes[index].y) * settle
     }
   }
 
   tailState.lastPlayerX = player.x
   tailState.lastPlayerY = player.y
-  tailState.lastVelocityX = smoothedVelocity.x
-  tailState.lastVelocityY = smoothedVelocity.y
-  tailState.pose = pose
+  tailState.smoothVX = smoothVX
+  tailState.smoothVY = smoothVY
 }
 
-const sampleTailSpline = (
-  points: TailPoint[],
-  subdivisions = 4,
-): TailPoint[] => {
-  if (points.length < 2) {
-    return points
-  }
-
-  const sampled: TailPoint[] = [{ ...points[0] }]
-
-  for (let index = 0; index < points.length - 1; index += 1) {
-    const p0 = points[Math.max(0, index - 1)]
-    const p1 = points[index]
-    const p2 = points[index + 1]
-    const p3 = points[Math.min(points.length - 1, index + 2)]
-
-    for (let step = 1; step <= subdivisions; step += 1) {
-      const t = step / subdivisions
+// ── Catmull-Rom spline sampling for smooth rendering ──
+const sampleSpline = (points: TailPoint[], subdivisions: number): TailPoint[] => {
+  if (points.length < 2) return points
+  const out: TailPoint[] = [{ ...points[0] }]
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[Math.max(0, i - 1)]
+    const p1 = points[i]
+    const p2 = points[i + 1]
+    const p3 = points[Math.min(points.length - 1, i + 2)]
+    for (let s = 1; s <= subdivisions; s++) {
+      const t = s / subdivisions
       const t2 = t * t
       const t3 = t2 * t
-
-      sampled.push({
-        x: 0.5 * (
-          (2 * p1.x)
-          + (-p0.x + p2.x) * t
-          + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2
-          + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3
-        ),
-        y: 0.5 * (
-          (2 * p1.y)
-          + (-p0.y + p2.y) * t
-          + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2
-          + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3
-        ),
+      out.push({
+        x: 0.5 * ((2 * p1.x) + (-p0.x + p2.x) * t + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
+        y: 0.5 * ((2 * p1.y) + (-p0.y + p2.y) * t + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3),
       })
     }
   }
-
-  return sampled
+  return out
 }
 
-const getSplineNormal = (points: TailPoint[], index: number): TailPoint => {
-  const previous = points[Math.max(0, index - 1)]
-  const next = points[Math.min(points.length - 1, index + 1)]
-  return normalize({ x: -(next.y - previous.y), y: next.x - previous.x })
-}
+const drawFluidTail = (context: CanvasRenderingContext2D) => {
+  if (!tailState.initialized || tailState.nodes.length < 2) return
 
-const drawTailStroke = (
-  context: CanvasRenderingContext2D,
-  points: TailPoint[],
-  color: string | CanvasGradient,
-  startWidth: number,
-  endWidth: number,
-  normalOffset = 0,
-) => {
-  if (points.length < 2) {
-    return
-  }
+  const raw = tailState.nodes.map(({ x, y }) => ({ x, y }))
+  const points = sampleSpline(raw, 4)
+  const n = points.length
 
-  context.strokeStyle = color
+  if (n < 2) return
+
+  const base = points[0]
+  const tip = points[n - 1]
+
+  // Gradient from warm brown base to pale pink tip
+  const grad = context.createLinearGradient(base.x, base.y, tip.x, tip.y)
+  grad.addColorStop(0, '#c08058')
+  grad.addColorStop(0.5, '#d9a687')
+  grad.addColorStop(1, '#f3d5c2')
+
   context.lineCap = 'round'
   context.lineJoin = 'round'
 
-  for (let index = 0; index < points.length - 1; index += 1) {
-    const t = index / (points.length - 2)
-    const currentNormal = getSplineNormal(points, index)
-    const nextNormal = getSplineNormal(points, index + 1)
-
-    context.lineWidth = lerp(startWidth, endWidth, t)
+  // Shadow / outline pass
+  for (let i = 0; i < n - 1; i++) {
+    const t = i / (n - 1)
+    const w = lerp(5.8, 1.2, t)
+    context.strokeStyle = `rgba(60, 35, 18, ${lerp(0.22, 0.06, t)})`
+    context.lineWidth = w + 1.6
     context.beginPath()
-    context.moveTo(
-      points[index].x + currentNormal.x * normalOffset,
-      points[index].y + currentNormal.y * normalOffset,
-    )
-    context.lineTo(
-      points[index + 1].x + nextNormal.x * normalOffset,
-      points[index + 1].y + nextNormal.y * normalOffset,
-    )
+    context.moveTo(points[i].x, points[i].y)
+    context.lineTo(points[i + 1].x, points[i + 1].y)
     context.stroke()
   }
-}
 
-const drawFluidTail = (context: CanvasRenderingContext2D, pose: TailPose) => {
-  if (!tailState.initialized || tailState.nodes.length < 2) {
-    return
+  // Main fill pass
+  for (let i = 0; i < n - 1; i++) {
+    const t = i / (n - 1)
+    const w = lerp(5.2, 0.8, t)
+    context.strokeStyle = grad
+    context.lineWidth = w
+    context.beginPath()
+    context.moveTo(points[i].x, points[i].y)
+    context.lineTo(points[i + 1].x, points[i + 1].y)
+    context.stroke()
   }
 
-  const points = sampleTailSpline(
-    tailState.nodes.map(({ x, y }) => ({ x, y })),
-    5,
-  )
-  const baseWidth = pose === 'side' ? 5.6 : pose === 'back' ? 5.1 : 4.8
-  const base = points[0]
-  const tip = points[points.length - 1]
-  const fillGradient = context.createLinearGradient(base.x, base.y, tip.x, tip.y)
-  fillGradient.addColorStop(0, '#c88862')
-  fillGradient.addColorStop(0.62, '#d9a687')
-  fillGradient.addColorStop(1, '#f3d5c2')
+  // Highlight pass (specular rim)
+  for (let i = 0; i < n - 1; i++) {
+    const t = i / (n - 1)
+    const w = lerp(1.8, 0.3, t)
+    context.strokeStyle = `rgba(255, 240, 225, ${lerp(0.38, 0.08, t)})`
+    context.lineWidth = w
+    context.beginPath()
+    context.moveTo(points[i].x - 0.6, points[i].y - 0.6)
+    context.lineTo(points[i + 1].x - 0.6, points[i + 1].y - 0.6)
+    context.stroke()
+  }
 
-  drawTailStroke(context, points, 'rgba(63, 37, 21, 0.26)', baseWidth + 1.4, 1.7, 0.9)
-  drawTailStroke(context, points, 'rgba(112, 70, 44, 0.78)', baseWidth + 0.25, 1.2)
-  drawTailStroke(context, points, fillGradient, baseWidth, 1)
-  drawTailStroke(context, points, 'rgba(255, 243, 230, 0.4)', baseWidth * 0.34, 0.55, -0.7)
-
-  context.fillStyle = 'rgba(249, 230, 214, 0.9)'
+  // Tiny tip dot
+  context.fillStyle = 'rgba(249, 228, 210, 0.85)'
   context.beginPath()
-  context.ellipse(tip.x, tip.y, 1.4, 0.9, 0, 0, Math.PI * 2)
+  context.arc(tip.x, tip.y, 1.2, 0, Math.PI * 2)
   context.fill()
 }
 
@@ -1240,7 +1173,7 @@ const drawPlayerSide = (
     context.scale(flip, 1)
   }
 
-  drawFluidTail(context, 'side')
+  drawFluidTail(context)
 
   // ── Back legs (far side, slightly behind near legs) ──
   const backLegSwing = cycle * 7
@@ -1401,7 +1334,7 @@ const drawPlayerBack = (
   context.translate(player.x, player.y - bob - stopBounce)
   if (lean === -1) context.scale(-1, 1)
 
-  drawFluidTail(context, 'back')
+  drawFluidTail(context)
 
   // ── Back legs — chunky haunches with 2-segment bend (trot gait) ──
   // Trot: diagonal pairs — left-back swings with right-front
@@ -1678,7 +1611,7 @@ const drawPlayerFront = (
   context.translate(player.x, player.y - bob - stopBounce)
   if (lean === -1) context.scale(-1, 1)
 
-  drawFluidTail(context, 'front')
+  drawFluidTail(context)
 
   // ── Back legs (behind body, peeking out to sides) ──
   const legSwingL = cycle * 5
