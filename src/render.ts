@@ -316,7 +316,7 @@ const drawFurniture = (context: CanvasRenderingContext2D) => {
     bx += w + 2
   }
 
-  // === Bed (upper right) ===
+  // === Bed (upper right) — base layer ===
   // Shadow beneath bed
   context.fillStyle = 'rgba(10, 5, 2, 0.2)'
   context.beginPath()
@@ -332,24 +332,6 @@ const drawFurniture = (context: CanvasRenderingContext2D) => {
   context.beginPath()
   context.roundRect(656, 196, 158, 128, 6)
   context.fill()
-
-  // Bedsheet / blanket (lower 2/3)
-  context.fillStyle = '#4a6a8a'
-  context.beginPath()
-  context.roundRect(656, 250, 158, 74, [0, 0, 6, 6])
-  context.fill()
-
-  // Blanket fold line
-  context.strokeStyle = 'rgba(30, 50, 70, 0.3)'
-  context.lineWidth = 2
-  context.beginPath()
-  context.moveTo(660, 254)
-  context.quadraticCurveTo(735, 246, 810, 254)
-  context.stroke()
-
-  // Blanket highlight
-  context.fillStyle = 'rgba(255, 255, 255, 0.06)'
-  context.fillRect(656, 256, 158, 8)
 
   // Pillow
   context.fillStyle = '#f0e8dc'
@@ -484,6 +466,145 @@ const drawFurniture = (context: CanvasRenderingContext2D) => {
   context.beginPath()
   context.arc(299, 159, 2.5, 0, Math.PI * 2)
   context.fill()
+}
+
+// Blanket bounds for clamping the lump drawing
+const BK = { x: 656, y: 250, w: 158, h: 74 }
+
+const drawBedBlanket = (
+  context: CanvasRenderingContext2D,
+  player: PlayerState,
+) => {
+  if (player.inBed) {
+    // ── Base blanket layer ──
+    context.fillStyle = '#4a6a8a'
+    context.beginPath()
+    context.roundRect(BK.x, BK.y, BK.w, BK.h, [0, 0, 6, 6])
+    context.fill()
+
+    // Clip all lump drawing to the blanket rectangle
+    context.save()
+    context.beginPath()
+    context.roundRect(BK.x, BK.y, BK.w, BK.h, [0, 0, 6, 6])
+    context.clip()
+
+    // ── The lump follows the mouse's actual position ──
+    const lumpX = player.x
+    const lumpY = player.y
+    const breathe = Math.sin(sceneTime * 2.0) * 2.0
+    const lumpW = 40
+    const lumpH = 24 + breathe
+
+    // When moving, the lump stretches in travel direction, wobbles, and jiggles
+    const wobble = player.moving ? Math.sin(sceneTime * 14) * 2.5 : 0
+    const stretchX = player.moving ? 8 : 0
+    const stretchY = player.moving ? -4 : 0
+
+    // Lump shadow — dark ring at the base for depth
+    context.fillStyle = 'rgba(20, 40, 60, 0.18)'
+    context.beginPath()
+    context.ellipse(lumpX, lumpY + 5, lumpW + 8 + stretchX, 7, 0, 0, Math.PI * 2)
+    context.fill()
+
+    // Main lump body — noticeably lighter than the blanket
+    context.fillStyle = '#5d8aaa'
+    context.beginPath()
+    context.ellipse(
+      lumpX, lumpY + 2 + wobble,
+      lumpW + stretchX, lumpH + stretchY,
+      0, Math.PI, 0,
+    )
+    context.fill()
+
+    // Lump mid-tone — subtle gradient effect
+    context.fillStyle = '#6898b4'
+    context.beginPath()
+    context.ellipse(
+      lumpX, lumpY - 1 + wobble,
+      lumpW - 6 + stretchX, lumpH - 5 + stretchY,
+      0, Math.PI, 0,
+    )
+    context.fill()
+
+    // Lump highlight — light catching the peak
+    context.fillStyle = 'rgba(255, 255, 255, 0.13)'
+    context.beginPath()
+    context.ellipse(
+      lumpX, lumpY - 4 + wobble,
+      lumpW - 14 + stretchX, lumpH - 10 + stretchY,
+      0, Math.PI, 0,
+    )
+    context.fill()
+
+    // ── Blanket wrinkles radiating from the lump ──
+    context.strokeStyle = 'rgba(30, 50, 70, 0.22)'
+    context.lineWidth = 1.2
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2 + sceneTime * 0.12
+      const innerR = lumpW + 4 + stretchX
+      const outerR = innerR + 18 + Math.sin(angle * 3) * 5
+      const sx = lumpX + Math.cos(angle) * innerR
+      const sy = lumpY + Math.sin(angle) * (innerR * 0.38)
+      const ex = lumpX + Math.cos(angle) * outerR
+      const ey = lumpY + Math.sin(angle) * (outerR * 0.38)
+      if (sx > BK.x + 4 && sx < BK.x + BK.w - 4
+        && sy > BK.y + 2 && sy < BK.y + BK.h - 2) {
+        context.beginPath()
+        context.moveTo(sx, sy)
+        context.lineTo(ex, ey)
+        context.stroke()
+      }
+    }
+
+
+    // Restore clip so ears can poke above the blanket
+    context.restore()
+
+    // ── Ears poking out at the top edge when near pillows ──
+    const nearTop = lumpY < BK.y + 28
+    if (nearTop) {
+      const earBase = BK.y - 1
+      const earBob = Math.sin(sceneTime * 1.3) * 0.6
+      const earSpread = 7
+      // Left ear
+      context.fillStyle = '#8b6b50'
+      context.beginPath()
+      context.ellipse(lumpX - earSpread, earBase + earBob, 5, 7, -0.2, 0, Math.PI * 2)
+      context.fill()
+      context.fillStyle = '#d4a0a0'
+      context.beginPath()
+      context.ellipse(lumpX - earSpread, earBase + earBob + 0.5, 3, 4.5, -0.2, 0, Math.PI * 2)
+      context.fill()
+      // Right ear
+      context.fillStyle = '#8b6b50'
+      context.beginPath()
+      context.ellipse(lumpX + earSpread, earBase + earBob - 1, 5, 7, 0.2, 0, Math.PI * 2)
+      context.fill()
+      context.fillStyle = '#d4a0a0'
+      context.beginPath()
+      context.ellipse(lumpX + earSpread, earBase + earBob - 0.5, 3, 4.5, 0.2, 0, Math.PI * 2)
+      context.fill()
+    }
+
+  } else {
+    // ── Normal blanket (no mouse) ──
+    context.fillStyle = '#4a6a8a'
+    context.beginPath()
+    context.roundRect(BK.x, BK.y, BK.w, BK.h, [0, 0, 6, 6])
+    context.fill()
+
+    // Blanket fold line
+    context.strokeStyle = 'rgba(30, 50, 70, 0.3)'
+    context.lineWidth = 2
+    context.beginPath()
+    context.moveTo(BK.x + 4, BK.y + 4)
+    context.quadraticCurveTo(BK.x + BK.w / 2, BK.y - 4, BK.x + BK.w - 4, BK.y + 4)
+    context.stroke()
+
+    // Blanket highlight
+    context.fillStyle = 'rgba(255, 255, 255, 0.06)'
+    context.fillRect(BK.x, BK.y + 6, BK.w, 8)
+  }
 }
 
 const drawAlarmClock = (context: CanvasRenderingContext2D) => {
@@ -1470,6 +1591,9 @@ export const renderScene = (
   drawRug(context)
   drawFurniture(context)
 
+  // Blanket draws on top of mattress (and mouse lump if in bed)
+  drawBedBlanket(context, player)
+
   // Depth sorting: nightstand body renders on top when player is behind
   const NIGHTSTAND_DEPTH_Y = 248
   const playerBehindNightstand = player.y < NIGHTSTAND_DEPTH_Y
@@ -1479,18 +1603,20 @@ export const renderScene = (
     drawNightstandBody(context)
   }
 
-  // Shadow — wider for quadruped body, breathes slightly
-  const shadowBreath = player.moving ? 0 : idleBreath() * 0.3
-  context.fillStyle = 'rgba(20, 12, 8, 0.32)'
-  context.beginPath()
-  context.ellipse(
-    player.x, player.y + 20,
-    24 + shadowBreath, 7 + shadowBreath * 0.2,
-    0, 0, Math.PI * 2,
-  )
-  context.fill()
+  if (!player.inBed) {
+    // Shadow — wider for quadruped body, breathes slightly
+    const shadowBreath = player.moving ? 0 : idleBreath() * 0.3
+    context.fillStyle = 'rgba(20, 12, 8, 0.32)'
+    context.beginPath()
+    context.ellipse(
+      player.x, player.y + 20,
+      24 + shadowBreath, 7 + shadowBreath * 0.2,
+      0, 0, Math.PI * 2,
+    )
+    context.fill()
 
-  drawPlayer(context, player)
+    drawPlayer(context, player)
+  }
 
   if (playerBehindNightstand) {
     drawNightstandBody(context)

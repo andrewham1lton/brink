@@ -15,6 +15,7 @@ export type Facing = 'left' | 'right' | 'up' | 'up-left' | 'up-right' | 'down' |
 export interface PlayerState {
   animationTime: number
   facing: Facing
+  inBed: boolean
   moving: boolean
   radius: number
   speed: number
@@ -43,17 +44,23 @@ export interface Rect {
   y: number
 }
 
+// The blanket zone — the walkable area of the bed where the mouse
+// appears as a lump. Headboard/pillows and footboard remain solid.
+export const BLANKET_ZONE: Rect = { x: 656, y: 250, width: 158, height: 74 }
+
 export const FURNITURE_HITBOXES: Rect[] = [
   { x: 96, y: 90, width: 142, height: 94 },    // Bookshelf
   { x: 242, y: 90, width: 108, height: 94 },    // Dresser
-  { x: 236, y: 222, width: 68, height: 86 },      // Nightstand (full body + legs)
-  { x: 636, y: 168, width: 194, height: 182 },  // Bed
+  { x: 236, y: 222, width: 68, height: 86 },    // Nightstand (full body + legs)
+  { x: 636, y: 168, width: 194, height: 84 },   // Bed — headboard + pillows (top block)
+  { x: 636, y: 322, width: 194, height: 28 },   // Bed — footboard (bottom block)
   { x: 826, y: 40, width: 134, height: 152 },   // Closed door + frame
 ]
 
 export const INITIAL_PLAYER_STATE: PlayerState = {
   animationTime: 0,
   facing: 'right',
+  inBed: false,
   moving: false,
   radius: 18,
   speed: 220,
@@ -107,6 +114,12 @@ const resolveCircleRect = (
   return { x: cx, y: rect.y + rect.height + radius }
 }
 
+export const isInBlanketZone = (x: number, y: number, radius: number): boolean => {
+  const z = BLANKET_ZONE
+  return x + radius > z.x && x - radius < z.x + z.width
+    && y + radius > z.y && y - radius < z.y + z.height
+}
+
 export const stepPlayer = (
   player: PlayerState,
   controls: ControlsState,
@@ -124,7 +137,9 @@ export const stepPlayer = (
 
   const normalizedX = horizontal / magnitude
   const normalizedY = vertical / magnitude
-  const distance = player.speed * deltaTime
+  // Move slower when under the covers
+  const speedMultiplier = player.inBed ? 0.45 : 1
+  const distance = player.speed * speedMultiplier * deltaTime
   let facing: Facing
   if (vertical < 0 && horizontal === 0) {
     facing = 'up'
@@ -156,10 +171,13 @@ export const stepPlayer = (
   newX = clamp(newX, bounds.minX, bounds.maxX)
   newY = clamp(newY, bounds.minY, bounds.maxY)
 
+  const inBed = isInBlanketZone(newX, newY, player.radius)
+
   return {
     ...player,
     animationTime: player.animationTime + deltaTime,
     facing,
+    inBed,
     moving: true,
     x: newX,
     y: newY,
