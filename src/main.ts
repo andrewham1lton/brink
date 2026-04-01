@@ -53,7 +53,9 @@ const controls: ControlsState = {
 }
 
 let player: PlayerState = { ...INITIAL_PLAYER_STATE }
-let dialog: DialogState = { visible: false, message: '' }
+const HIDDEN_DIALOG: DialogState = { visible: false, message: '' }
+let blockingDialog: DialogState = { ...HIDDEN_DIALOG }
+let ambientDialog = { ...HIDDEN_DIALOG, timer: 0 }
 let previousTime = performance.now()
 const currentAreaId: AreaId = 'bedroom'
 const audioManager = new AudioManager()
@@ -71,9 +73,13 @@ const BED_REVEAL_LINES = [
   'Interesting.',
 ]
 const BED_REVEAL_DELAY = 0.6
+const TAIL_REACTION_LINE = 'What the heck is up with this tail...'
+const TAIL_REACTION_DISTANCE = 40
+const TAIL_REACTION_DURATION = 3.2
 
 const cutscene = { active: true, step: 0, timer: 2.0 }
 const bedReveal = { active: false, complete: false, delay: 0, step: 0 }
+const tailReaction = { distance: 0, shown: false }
 
 const getCurrentMusic = () => resolveAreaMusic(
   currentAreaId,
@@ -87,18 +93,44 @@ const clearControls = () => {
   controls.up = false
 }
 
-const showDialog = (message: string) => {
-  dialog = { visible: true, message }
+const getActiveDialog = (): DialogState => {
+  if (blockingDialog.visible) {
+    return blockingDialog
+  }
+
+  if (ambientDialog.visible) {
+    return ambientDialog
+  }
+
+  return HIDDEN_DIALOG
+}
+
+const hideAmbientDialog = () => {
+  ambientDialog = { ...HIDDEN_DIALOG, timer: 0 }
+}
+
+const showBlockingDialog = (message: string) => {
+  hideAmbientDialog()
+  blockingDialog = { visible: true, message }
   clearControls()
 }
 
-const hideDialog = () => {
-  dialog = { visible: false, message: '' }
+const hideBlockingDialog = () => {
+  blockingDialog = { ...HIDDEN_DIALOG }
 }
 
-const isMovementLocked = () => cutscene.active || bedReveal.active || dialog.visible
+const showAmbientDialog = (message: string, duration: number) => {
+  if (blockingDialog.visible) {
+    return
+  }
+
+  ambientDialog = { visible: true, message, timer: duration }
+}
+
+const isMovementLocked = () => cutscene.active || bedReveal.active || blockingDialog.visible
 
 const syncDebugState = () => {
+  const dialog = getActiveDialog()
   app.dataset.playerX = player.x.toFixed(2)
   app.dataset.playerY = player.y.toFixed(2)
   app.dataset.playerInBed = String(player.inBed)
@@ -164,23 +196,23 @@ const formatTime = (): string => {
 }
 
 const advanceDialogOrInteract = () => {
-  if (cutscene.active && dialog.visible) {
+  if (cutscene.active && blockingDialog.visible) {
     cutscene.step++
     if (cutscene.step < OPENING_LINES.length) {
-      showDialog(OPENING_LINES[cutscene.step])
+      showBlockingDialog(OPENING_LINES[cutscene.step])
     } else {
-      hideDialog()
+      hideBlockingDialog()
       cutscene.active = false
     }
     return
   }
 
-  if (bedReveal.active && dialog.visible) {
+  if (bedReveal.active && blockingDialog.visible) {
     bedReveal.step++
     if (bedReveal.step < BED_REVEAL_LINES.length) {
-      showDialog(BED_REVEAL_LINES[bedReveal.step])
+      showBlockingDialog(BED_REVEAL_LINES[bedReveal.step])
     } else {
-      hideDialog()
+      hideBlockingDialog()
       bedReveal.active = false
       bedReveal.complete = true
     }
@@ -188,8 +220,8 @@ const advanceDialogOrInteract = () => {
   }
 
   // Normal dialog dismiss
-  if (dialog.visible) {
-    hideDialog()
+  if (blockingDialog.visible) {
+    hideBlockingDialog()
     return
   }
 
@@ -198,7 +230,7 @@ const advanceDialogOrInteract = () => {
   if (bedReveal.active) return
 
   if (!player.inBed && isInZone(player.x, player.y, ALARM_CLOCK_ZONE)) {
-    showDialog(`This must be my alarm clock. It says it's ${formatTime()}.`)
+    showBlockingDialog(`This must be my alarm clock. It says it's ${formatTime()}.`)
   }
 }
 
@@ -223,24 +255,26 @@ const frame = (time: number) => {
   previousTime = time
 
   // Cutscene timer: show first knock after delay
-  if (cutscene.active && cutscene.step === 0 && !dialog.visible) {
+  if (cutscene.active && cutscene.step === 0 && !blockingDialog.visible) {
     cutscene.timer -= deltaTime
     if (cutscene.timer <= 0) {
-      showDialog(OPENING_LINES[0])
+      showBlockingDialog(OPENING_LINES[0])
       cutscene.step = 0
     }
   }
 
-  if (bedReveal.active && !dialog.visible) {
+  if (bedReveal.active && !blockingDialog.visible) {
     bedReveal.delay -= deltaTime
     if (bedReveal.delay <= 0) {
-      showDialog(BED_REVEAL_LINES[bedReveal.step])
+      showBlockingDialog(BED_REVEAL_LINES[bedReveal.step])
     }
   }
 
   if (!isMovementLocked()) {
+    const previousPlayer = player
     const nextPlayer = stepPlayer(player, controls, deltaTime, ROOM_BOUNDS)
     const justLeftBed = player.inBed && !nextPlayer.inBed && !bedReveal.complete
+    const distanceMoved = Math.hypot(nextPlayer.x - previousPlayer.x, nextPlayer.y - previousPlayer.y)
 
     player = justLeftBed
       ? { ...nextPlayer, moving: false }
@@ -250,20 +284,36 @@ const frame = (time: number) => {
       bedReveal.active = true
       bedReveal.delay = BED_REVEAL_DELAY
       bedReveal.step = 0
+      tailReaction.distance = 0
       clearControls()
+    } else if (bedReveal.complete && !tailReaction.shown) {
+      tailReaction.distance += distanceMoved
+
+      if (tailReaction.distance >= TAIL_REACTION_DISTANCE) {
+        showAmbientDialog(TAIL_REACTION_LINE, TAIL_REACTION_DURATION)
+        tailReaction.shown = true
+      }
     }
   } else if (player.moving) {
     player = { ...player, moving: false }
   }
 
+  if (ambientDialog.visible) {
+    ambientDialog = { ...ambientDialog, timer: ambientDialog.timer - deltaTime }
+
+    if (ambientDialog.timer <= 0) {
+      hideAmbientDialog()
+    }
+  }
+
   audioManager.syncMusic(getCurrentMusic())
-  renderScene(context, player, dialog)
+  renderScene(context, player, getActiveDialog())
   syncDebugState()
 
   window.requestAnimationFrame(frame)
 }
 
 audioManager.syncMusic(getCurrentMusic())
-renderScene(context, player, dialog)
+renderScene(context, player, getActiveDialog())
 syncDebugState()
 window.requestAnimationFrame(frame)
