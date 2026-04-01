@@ -15,6 +15,7 @@ export type Facing = 'left' | 'right' | 'up' | 'up-left' | 'up-right' | 'down' |
 export interface PlayerState {
   animationTime: number
   facing: Facing
+  inBed: boolean
   moving: boolean
   radius: number
   speed: number
@@ -51,9 +52,16 @@ export const FURNITURE_HITBOXES: Rect[] = [
   { x: 826, y: 40, width: 134, height: 152 },   // Closed door + frame
 ]
 
+// Bed center position for tucking in
+export const BED_CENTER = { x: 735, y: 280 }
+
+// Bed hitbox index in FURNITURE_HITBOXES
+export const BED_HITBOX_INDEX = 3
+
 export const INITIAL_PLAYER_STATE: PlayerState = {
   animationTime: 0,
   facing: 'right',
+  inBed: false,
   moving: false,
   radius: 18,
   speed: 220,
@@ -107,6 +115,46 @@ const resolveCircleRect = (
   return { x: cx, y: rect.y + rect.height + radius }
 }
 
+export const isNearBed = (player: PlayerState): boolean => {
+  const bed = FURNITURE_HITBOXES[BED_HITBOX_INDEX]
+  const margin = 8
+  const expanded = {
+    x: bed.x - margin,
+    y: bed.y - margin,
+    width: bed.width + margin * 2,
+    height: bed.height + margin * 2,
+  }
+  const nearestX = clamp(player.x, expanded.x, expanded.x + expanded.width)
+  const nearestY = clamp(player.y, expanded.y, expanded.y + expanded.height)
+  const dx = player.x - nearestX
+  const dy = player.y - nearestY
+  return dx * dx + dy * dy < (player.radius + margin) * (player.radius + margin)
+}
+
+export const toggleBed = (player: PlayerState): PlayerState => {
+  if (player.inBed) {
+    // Get out of bed — place player at foot of bed
+    return {
+      ...player,
+      inBed: false,
+      moving: false,
+      x: 735,
+      y: 365,
+      facing: 'down',
+    }
+  }
+  if (isNearBed(player)) {
+    return {
+      ...player,
+      inBed: true,
+      moving: false,
+      x: BED_CENTER.x,
+      y: BED_CENTER.y,
+    }
+  }
+  return player
+}
+
 export const stepPlayer = (
   player: PlayerState,
   controls: ControlsState,
@@ -114,6 +162,10 @@ export const stepPlayer = (
   bounds: RoomBounds,
   hitboxes: Rect[] = FURNITURE_HITBOXES,
 ): PlayerState => {
+  if (player.inBed) {
+    return { ...player, moving: false }
+  }
+
   const horizontal = Number(controls.right) - Number(controls.left)
   const vertical = Number(controls.down) - Number(controls.up)
   const magnitude = Math.hypot(horizontal, vertical)

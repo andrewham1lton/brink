@@ -6,6 +6,7 @@ import {
   MOVEMENT_KEYS,
   ROOM_BOUNDS,
   stepPlayer,
+  toggleBed,
   type ControlsState,
   type PlayerState,
 } from './movement'
@@ -68,6 +69,12 @@ const setKeyState = (code: string, pressed: boolean) => {
 }
 
 window.addEventListener('keydown', (event) => {
+  if (event.code === 'KeyE' || event.code === 'Space') {
+    event.preventDefault()
+    player = toggleBed(player)
+    return
+  }
+
   if (!(event.code in MOVEMENT_KEYS)) {
     return
   }
