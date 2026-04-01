@@ -678,9 +678,6 @@ const twitch = (t: number, freq: number, duty = 0.12): number => {
 const idleBreath = (): number =>
   Math.sin(sceneTime * 2.2) * 0.6                // gentle torso pulse
 
-const idleTailSway = (): number =>
-  Math.sin(sceneTime * 1.6) * 6                  // slow tail wag
-
 const idleEarTwitch = (): number =>
   twitch(sceneTime, 0.45, 0.08) * 3              // occasional ear flick
 
@@ -692,6 +689,347 @@ const isBlinking = (): boolean => {
   const period = 3.4
   const phase = ((sceneTime / period) % 1 + 1) % 1
   return phase < 0.045
+}
+
+type TailPose = 'back' | 'front' | 'side'
+
+interface TailPoint {
+  x: number
+  y: number
+}
+
+interface TailNode extends TailPoint {
+  previousX: number
+  previousY: number
+}
+
+interface TailState {
+  initialized: boolean
+  lastPlayerX: number
+  lastPlayerY: number
+  nodes: TailNode[]
+  pose: TailPose
+}
+
+const TAIL_NODE_COUNT = 18
+const TAIL_CONSTRAINT_PASSES = 6
+
+const tailState: TailState = {
+  initialized: false,
+  lastPlayerX: 0,
+  lastPlayerY: 0,
+  nodes: [],
+  pose: 'side',
+}
+
+const clamp = (value: number, min: number, max: number): number =>
+  Math.min(Math.max(value, min), max)
+
+const lerp = (start: number, end: number, t: number): number =>
+  start + (end - start) * t
+
+const cubicBezierPoint = (
+  p0: TailPoint,
+  p1: TailPoint,
+  p2: TailPoint,
+  p3: TailPoint,
+  t: number,
+): TailPoint => {
+  const mt = 1 - t
+  const mt2 = mt * mt
+  const t2 = t * t
+  return {
+    x: mt2 * mt * p0.x
+      + 3 * mt2 * t * p1.x
+      + 3 * mt * t2 * p2.x
+      + t2 * t * p3.x,
+    y: mt2 * mt * p0.y
+      + 3 * mt2 * t * p1.y
+      + 3 * mt * t2 * p2.y
+      + t2 * t * p3.y,
+  }
+}
+
+const cubicBezierTangent = (
+  p0: TailPoint,
+  p1: TailPoint,
+  p2: TailPoint,
+  p3: TailPoint,
+  t: number,
+): TailPoint => {
+  const mt = 1 - t
+  return {
+    x: 3 * mt * mt * (p1.x - p0.x)
+      + 6 * mt * t * (p2.x - p1.x)
+      + 3 * t * t * (p3.x - p2.x),
+    y: 3 * mt * mt * (p1.y - p0.y)
+      + 6 * mt * t * (p2.y - p1.y)
+      + 3 * t * t * (p3.y - p2.y),
+  }
+}
+
+const normalize = (point: TailPoint): TailPoint => {
+  const length = Math.hypot(point.x, point.y)
+  if (length === 0) {
+    return { x: 0, y: 0 }
+  }
+  return { x: point.x / length, y: point.y / length }
+}
+
+const distanceBetween = (a: TailPoint, b: TailPoint): number =>
+  Math.hypot(a.x - b.x, a.y - b.y)
+
+const getTailPose = (player: PlayerState): TailPose => {
+  if (player.facing === 'up' || player.facing === 'up-left' || player.facing === 'up-right') {
+    return 'back'
+  }
+
+  if (player.facing === 'down' || player.facing === 'down-left' || player.facing === 'down-right') {
+    return 'front'
+  }
+
+  return 'side'
+}
+
+const getTailMirror = (player: PlayerState): number =>
+  player.facing === 'left' || player.facing === 'up-left' || player.facing === 'down-left'
+    ? -1
+    : 1
+
+const getTailTargets = (
+  player: PlayerState,
+  pose: TailPose,
+  localVelocity: TailPoint,
+): TailPoint[] => {
+  const speed = clamp(Math.hypot(localVelocity.x, localVelocity.y) / player.speed, 0, 1.25)
+  const idleWave = Math.sin(sceneTime * 1.8)
+  const gaitWave = player.moving
+    ? Math.sin(player.animationTime * WALK_CYCLE_SPEED * 0.7)
+    : idleWave
+  const whipWave = player.moving
+    ? Math.sin(sceneTime * 8.4)
+    : Math.sin(sceneTime * 3.2)
+  const dragX = clamp(localVelocity.x * 0.045, -12, 12)
+  const dragY = clamp(localVelocity.y * 0.04, -12, 12)
+
+  let root: TailPoint
+  let control1: TailPoint
+  let control2: TailPoint
+  let tip: TailPoint
+  let waveScale: number
+  let phaseShift: number
+
+  if (pose === 'side') {
+    root = { x: -18, y: -2 }
+    control1 = {
+      x: -28 - dragX * 0.3,
+      y: -6 - dragY * 0.12 + gaitWave * 1.2,
+    }
+    control2 = {
+      x: -45 - dragX * 0.95,
+      y: -24 - dragY * 0.35 + gaitWave * 4.8,
+    }
+    tip = {
+      x: -37 - dragX * 1.45 + whipWave * 1.6,
+      y: -50 - dragY * 0.7 + gaitWave * 7.4,
+    }
+    waveScale = 2.4 + speed * 2.8
+    phaseShift = 0
+  } else if (pose === 'front') {
+    root = { x: -2, y: -8 }
+    control1 = {
+      x: -8 - dragX * 0.2,
+      y: -18 - dragY * 0.25 + gaitWave * 1.1,
+    }
+    control2 = {
+      x: -1 - dragX * 0.55 + gaitWave * 2.4,
+      y: -37 - dragY * 0.85 + whipWave * 1.2,
+    }
+    tip = {
+      x: 5 - dragX * 0.8 + gaitWave * 5.5,
+      y: -54 - dragY * 1.2 + whipWave * 3.8,
+    }
+    waveScale = 1.8 + speed * 2.2
+    phaseShift = 0.8
+  } else {
+    root = { x: 0, y: 8 }
+    control1 = {
+      x: 2 - dragX * 0.18,
+      y: 17 - dragY * 0.15 + gaitWave * 0.8,
+    }
+    control2 = {
+      x: -2 - dragX * 0.42 + gaitWave * 1.8,
+      y: 35 - dragY * 0.65 + whipWave * 1.1,
+    }
+    tip = {
+      x: 4 - dragX * 0.65 + gaitWave * 4.5,
+      y: 57 - dragY * 1.1 + whipWave * 3.2,
+    }
+    waveScale = 1.9 + speed * 2.5
+    phaseShift = 1.6
+  }
+
+  return Array.from({ length: TAIL_NODE_COUNT }, (_, index) => {
+    const t = index / (TAIL_NODE_COUNT - 1)
+    const curvePoint = cubicBezierPoint(root, control1, control2, tip, t)
+    const tangent = cubicBezierTangent(root, control1, control2, tip, t)
+    const normal = normalize({ x: -tangent.y, y: tangent.x })
+    const envelope = t * t * (0.55 + speed * 0.35)
+    const travelingWave = Math.sin(sceneTime * 7.4 - t * 9.5 + phaseShift) * waveScale * envelope
+    const shimmer = Math.sin(sceneTime * 2.7 + t * 11 + phaseShift) * 0.9 * envelope
+
+    return {
+      x: curvePoint.x + normal.x * (travelingWave + shimmer),
+      y: curvePoint.y + normal.y * (travelingWave + shimmer),
+    }
+  })
+}
+
+const resetTail = (targets: TailPoint[], player: PlayerState, pose: TailPose) => {
+  tailState.nodes = targets.map((target) => ({
+    x: target.x,
+    y: target.y,
+    previousX: target.x,
+    previousY: target.y,
+  }))
+  tailState.initialized = true
+  tailState.lastPlayerX = player.x
+  tailState.lastPlayerY = player.y
+  tailState.pose = pose
+}
+
+const updateTailSimulation = (player: PlayerState, dt: number) => {
+  const pose = getTailPose(player)
+
+  if (!tailState.initialized || dt <= 0) {
+    resetTail(getTailTargets(player, pose, { x: 0, y: 0 }), player, pose)
+    return
+  }
+
+  const mirror = getTailMirror(player)
+  const localVelocity = {
+    x: clamp(((player.x - tailState.lastPlayerX) / dt) * mirror, -320, 320),
+    y: clamp((player.y - tailState.lastPlayerY) / dt, -320, 320),
+  }
+  const targets = getTailTargets(player, pose, localVelocity)
+
+  if (tailState.nodes.length !== targets.length) {
+    resetTail(targets, player, pose)
+    return
+  }
+
+  if (tailState.pose !== pose) {
+    tailState.nodes.forEach((node, index) => {
+      node.x = lerp(node.x, targets[index].x, 0.35)
+      node.y = lerp(node.y, targets[index].y, 0.35)
+      node.previousX = lerp(node.previousX, targets[index].x, 0.2)
+      node.previousY = lerp(node.previousY, targets[index].y, 0.2)
+    })
+  }
+
+  const followStrength = clamp(dt * 60, 0.65, 1.35)
+  const inertia = player.moving ? 0.84 : 0.74
+
+  tailState.nodes[0].x = targets[0].x
+  tailState.nodes[0].y = targets[0].y
+  tailState.nodes[0].previousX = targets[0].x
+  tailState.nodes[0].previousY = targets[0].y
+
+  for (let index = 1; index < tailState.nodes.length; index += 1) {
+    const node = tailState.nodes[index]
+    const velocityX = (node.x - node.previousX) * inertia
+    const velocityY = (node.y - node.previousY) * inertia
+
+    node.previousX = node.x
+    node.previousY = node.y
+
+    const lag = index / (tailState.nodes.length - 1)
+    node.x += velocityX - localVelocity.x * lag * 0.012
+    node.y += velocityY - localVelocity.y * lag * 0.012
+
+    const attraction = (0.11 + lag * 0.12) * followStrength
+    node.x += (targets[index].x - node.x) * attraction
+    node.y += (targets[index].y - node.y) * attraction
+  }
+
+  const lengths = targets.slice(1).map((target, index) =>
+    distanceBetween(target, targets[index]))
+
+  for (let pass = 0; pass < TAIL_CONSTRAINT_PASSES; pass += 1) {
+    tailState.nodes[0].x = targets[0].x
+    tailState.nodes[0].y = targets[0].y
+
+    for (let index = 1; index < tailState.nodes.length; index += 1) {
+      const current = tailState.nodes[index]
+      const previous = tailState.nodes[index - 1]
+      const dx = current.x - previous.x
+      const dy = current.y - previous.y
+      const distance = Math.hypot(dx, dy) || 0.0001
+      const difference = (distance - lengths[index - 1]) / distance
+
+      if (index === 1) {
+        current.x -= dx * difference
+        current.y -= dy * difference
+      } else {
+        current.x -= dx * difference * 0.55
+        current.y -= dy * difference * 0.55
+        previous.x += dx * difference * 0.45
+        previous.y += dy * difference * 0.45
+      }
+    }
+
+    for (let index = 1; index < tailState.nodes.length; index += 1) {
+      const settle = 0.018 + index * 0.002
+      tailState.nodes[index].x += (targets[index].x - tailState.nodes[index].x) * settle
+      tailState.nodes[index].y += (targets[index].y - tailState.nodes[index].y) * settle
+    }
+  }
+
+  tailState.lastPlayerX = player.x
+  tailState.lastPlayerY = player.y
+  tailState.pose = pose
+}
+
+const drawTailStroke = (
+  context: CanvasRenderingContext2D,
+  points: TailPoint[],
+  color: string,
+  startWidth: number,
+  endWidth: number,
+  offsetX = 0,
+  offsetY = 0,
+) => {
+  context.strokeStyle = color
+  context.lineCap = 'round'
+  context.lineJoin = 'round'
+
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const t = index / (points.length - 2)
+    context.lineWidth = lerp(startWidth, endWidth, t)
+    context.beginPath()
+    context.moveTo(points[index].x + offsetX, points[index].y + offsetY)
+    context.lineTo(points[index + 1].x + offsetX, points[index + 1].y + offsetY)
+    context.stroke()
+  }
+}
+
+const drawFluidTail = (context: CanvasRenderingContext2D, pose: TailPose) => {
+  if (!tailState.initialized || tailState.nodes.length < 2) {
+    return
+  }
+
+  const points = tailState.nodes.map(({ x, y }) => ({ x, y }))
+  const baseWidth = pose === 'side' ? 5.8 : pose === 'back' ? 5.2 : 4.8
+
+  drawTailStroke(context, points, 'rgba(70, 42, 26, 0.22)', baseWidth + 1.2, 1.8, 0.8, 1.2)
+  drawTailStroke(context, points, '#d4a888', baseWidth, 1.2)
+  drawTailStroke(context, points, 'rgba(255, 236, 214, 0.38)', baseWidth * 0.42, 0.7, 0.4, -0.6)
+
+  const tip = points[points.length - 1]
+  context.fillStyle = 'rgba(255, 236, 214, 0.5)'
+  context.beginPath()
+  context.arc(tip.x + 0.3, tip.y - 0.2, 0.9, 0, Math.PI * 2)
+  context.fill()
 }
 
 // ── Quadruped rat head (side view) — cuter, bigger proportions ──
@@ -823,26 +1161,7 @@ const drawPlayerSide = (
     context.scale(flip, 1)
   }
 
-  // ── Tail — S-curve from rear ──
-  const tailCycle = player.moving ? cycle : 0
-  const tailIdle = player.moving ? 0 : idleTailSway()
-  context.strokeStyle = '#d4a888'
-  context.lineWidth = 2.5
-  context.lineCap = 'round'
-  context.beginPath()
-  context.moveTo(-18, -2)
-  context.bezierCurveTo(
-    -30, -6 + tailIdle * 0.3,
-    -38, -16 + tailCycle * 5 + tailIdle * 0.6,
-    -28, -28 + tailCycle * 6 + tailIdle,
-  )
-  context.stroke()
-  // Tail tip curl
-  const tipX = -28 + tailCycle * 2 + tailIdle * 0.4
-  const tipY = -28 + tailCycle * 6 + tailIdle
-  context.beginPath()
-  context.bezierCurveTo(tipX, tipY, tipX + 4, tipY - 6, tipX + 2, tipY - 10)
-  context.stroke()
+  drawFluidTail(context, 'side')
 
   // ── Back legs (far side, slightly behind near legs) ──
   const backLegSwing = cycle * 7
@@ -1003,30 +1322,7 @@ const drawPlayerBack = (
   context.translate(player.x, player.y - bob - stopBounce)
   if (lean === -1) context.scale(-1, 1)
 
-  // ── Tail — hangs down toward the viewer from the rump ──
-  const tailIdle = player.moving ? 0 : idleTailSway()
-  const tailWalk = player.moving ? cycle * 2 : 0
-  context.strokeStyle = '#d4a888'
-  context.lineWidth = 3
-  context.lineCap = 'round'
-  context.beginPath()
-  context.moveTo(tailIdle * 0.15, 8)
-  context.bezierCurveTo(
-    2 + tailIdle * 0.3 + tailWalk, 14,
-    -2 + tailIdle * 0.5 + tailWalk * 0.5, 22,
-    3 + tailIdle * 0.7 + tailWalk * 0.3, 28,
-  )
-  context.stroke()
-  // Tail tip thinning with gentle curl
-  context.lineWidth = 1.8
-  context.beginPath()
-  context.moveTo(3 + tailIdle * 0.7 + tailWalk * 0.3, 28)
-  context.bezierCurveTo(
-    5 + tailIdle * 0.4, 31,
-    4 + tailIdle * 0.3, 34,
-    2 + tailIdle * 0.2, 36,
-  )
-  context.stroke()
+  drawFluidTail(context, 'back')
 
   // ── Back legs — chunky haunches with 2-segment bend (trot gait) ──
   // Trot: diagonal pairs — left-back swings with right-front
@@ -1303,20 +1599,7 @@ const drawPlayerFront = (
   context.translate(player.x, player.y - bob - stopBounce)
   if (lean === -1) context.scale(-1, 1)
 
-  // ── Tail — peeks out behind the body, curling up ──
-  const tailIdle = player.moving ? 0 : idleTailSway()
-  const tailSway = tailIdle * 0.3
-  context.strokeStyle = '#d4a888'
-  context.lineWidth = 2.5
-  context.lineCap = 'round'
-  context.beginPath()
-  context.moveTo(-4 + tailSway * 0.2, -8)
-  context.bezierCurveTo(
-    -10 + tailSway * 0.5, -16,
-    -8 + tailSway * 0.7 + cycle * 2, -26 + cycle * 3,
-    -4 + tailSway + cycle * 2, -34 + cycle * 3,
-  )
-  context.stroke()
+  drawFluidTail(context, 'front')
 
   // ── Back legs (behind body, peeking out to sides) ──
   const legSwingL = cycle * 5
@@ -1686,6 +1969,8 @@ export const renderScene = (
   }
 
   if (!player.inBed) {
+    updateTailSimulation(player, dt)
+
     // Shadow — wider for quadruped body, breathes slightly
     const shadowBreath = player.moving ? 0 : idleBreath() * 0.3
     context.fillStyle = 'rgba(20, 12, 8, 0.32)'
