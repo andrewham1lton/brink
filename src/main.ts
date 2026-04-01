@@ -69,9 +69,10 @@ const BED_REVEAL_LINES = [
   'Oh. I\'m a rat.',
   'Interesting.',
 ]
+const BED_REVEAL_DELAY = 0.6
 
 const cutscene = { active: true, step: 0, timer: 2.0 }
-const bedReveal = { active: false, complete: false, step: 0 }
+const bedReveal = { active: false, complete: false, delay: 0, step: 0 }
 
 const getCurrentMusic = () => resolveAreaMusic(
   currentAreaId,
@@ -193,6 +194,7 @@ const advanceDialogOrInteract = () => {
 
   // Block interactions during cutscene (waiting for timer)
   if (cutscene.active) return
+  if (bedReveal.active) return
 
   if (!player.inBed && isInZone(player.x, player.y, ALARM_CLOCK_ZONE)) {
     showDialog(`This must be my alarm clock. It says it's ${formatTime()}.`)
@@ -228,6 +230,13 @@ const frame = (time: number) => {
     }
   }
 
+  if (bedReveal.active && !dialog.visible) {
+    bedReveal.delay -= deltaTime
+    if (bedReveal.delay <= 0) {
+      showDialog(BED_REVEAL_LINES[bedReveal.step])
+    }
+  }
+
   if (!isMovementLocked()) {
     const nextPlayer = stepPlayer(player, controls, deltaTime, ROOM_BOUNDS)
     const justLeftBed = player.inBed && !nextPlayer.inBed && !bedReveal.complete
@@ -238,8 +247,9 @@ const frame = (time: number) => {
 
     if (justLeftBed) {
       bedReveal.active = true
+      bedReveal.delay = BED_REVEAL_DELAY
       bedReveal.step = 0
-      showDialog(BED_REVEAL_LINES[0])
+      clearControls()
     }
   } else if (player.moving) {
     player = { ...player, moving: false }

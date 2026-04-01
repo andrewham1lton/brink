@@ -122,11 +122,20 @@ test('leaving the bed triggers the rat reveal dialog sequence before movement re
     expect(movedInBed.x).toBeLessThan(inBedStart.x - 5)
     await expect(app).toHaveAttribute('data-player-in-bed', 'true')
 
-    await window.keyboard.down('a')
-    await window.waitForTimeout(1200)
-    await window.keyboard.up('a')
+    for (let i = 0; i < 24; i++) {
+      await pressFor(window, 'a', 60)
+      if (await app.getAttribute('data-player-in-bed') === 'false') {
+        break
+      }
+    }
 
     await expect(app).toHaveAttribute('data-player-in-bed', 'false')
+    await expect(app).toHaveAttribute('data-dialog-visible', 'false')
+
+    await window.waitForTimeout(150)
+    await expect(app).toHaveAttribute('data-dialog-message', '')
+    await expect(app).toHaveAttribute('data-movement-locked', 'true')
+
     await expect(app).toHaveAttribute('data-dialog-message', 'Oh. I\'m a rat.')
 
     const frozen = await readPosition(window)
