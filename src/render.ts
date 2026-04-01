@@ -713,6 +713,7 @@ interface TailAnchorProfile {
   restCurl: number      // how much the rest shape curls (radians over full length)
   gravityX: number
   gravityY: number
+  motionScale: number
   poseBlend: number
   segmentLength: number
   restStrength: number
@@ -776,6 +777,7 @@ const TAIL_ANCHORS: Record<TailPose, TailAnchorProfile> = {
     restCurl: 0.82,       // softer curl to avoid a hook-shaped tip
     gravityX: 0.05,
     gravityY: 0.26,
+    motionScale: 1,
     poseBlend: 0.24,
     segmentLength: 3.2,
     restStrength: 0.009,
@@ -787,7 +789,8 @@ const TAIL_ANCHORS: Record<TailPose, TailAnchorProfile> = {
     restCurl: 0.72,            // keeps the back view from looking like a rigid hook
     gravityX: 0,
     gravityY: 0.3,
-    poseBlend: 0.36,
+    motionScale: 0.42,
+    poseBlend: 0.52,
     segmentLength: 2.6,
     restStrength: 0.012,
     swayAmp: 0.52,
@@ -798,7 +801,8 @@ const TAIL_ANCHORS: Record<TailPose, TailAnchorProfile> = {
     restCurl: 0.72,
     gravityX: 0.02,
     gravityY: 0.08,
-    poseBlend: 0.38,
+    motionScale: 0.36,
+    poseBlend: 0.56,
     segmentLength: 2.5,
     restStrength: 0.012,
     swayAmp: 0.48,
@@ -898,12 +902,12 @@ const updateTailSimulation = (player: PlayerState, dt: number) => {
     vy += profile.gravityY * TAIL_GRAVITY_SCALE * dt * dt
 
     // Drag from player movement — tail trails behind
-    vx -= smoothVX * TAIL_DRAG_FACTOR * tipWeight * dt
-    vy -= smoothVY * TAIL_DRAG_FACTOR * tipWeight * dt
+    vx -= smoothVX * TAIL_DRAG_FACTOR * profile.motionScale * tipWeight * dt
+    vy -= smoothVY * TAIL_DRAG_FACTOR * profile.motionScale * tipWeight * dt
 
     // Acceleration whip — sudden direction changes ripple outward
-    vx -= accelX * TAIL_WHIP_FACTOR * tipWeight * dt
-    vy -= accelY * TAIL_WHIP_FACTOR * tipWeight * dt
+    vx -= accelX * TAIL_WHIP_FACTOR * profile.motionScale * tipWeight * dt
+    vy -= accelY * TAIL_WHIP_FACTOR * profile.motionScale * tipWeight * dt
 
     // Idle sway — cascading sine wave for organic breathing
     const swayPhase = sceneTime * TAIL_IDLE_SWAY_SPEED + i * 0.55
