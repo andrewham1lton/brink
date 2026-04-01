@@ -65,18 +65,46 @@ const OPENING_LINES = [
   '*knock knock knock*',
   'Rise and shine, little one! Come meet me out in the garden when you\'re ready.',
 ]
+const BED_REVEAL_LINES = [
+  'Oh. I\'m a rat.',
+  'Interesting.',
+]
 
 const cutscene = { active: true, step: 0, timer: 2.0 }
+const bedReveal = { active: false, complete: false, step: 0 }
 
 const getCurrentMusic = () => resolveAreaMusic(
   currentAreaId,
   cutscene.active ? 'cutscene' : 'ambient',
 )
 
+const clearControls = () => {
+  controls.down = false
+  controls.left = false
+  controls.right = false
+  controls.up = false
+}
+
+const showDialog = (message: string) => {
+  dialog = { visible: true, message }
+  clearControls()
+}
+
+const hideDialog = () => {
+  dialog = { visible: false, message: '' }
+}
+
+const isMovementLocked = () => cutscene.active || bedReveal.active || dialog.visible
+
 const syncDebugState = () => {
   app.dataset.playerX = player.x.toFixed(2)
   app.dataset.playerY = player.y.toFixed(2)
+  app.dataset.playerInBed = String(player.inBed)
   app.dataset.areaId = currentAreaId
+  app.dataset.cutsceneActive = String(cutscene.active)
+  app.dataset.dialogMessage = dialog.message
+  app.dataset.dialogVisible = String(dialog.visible)
+  app.dataset.movementLocked = String(isMovementLocked())
   app.dataset.musicTrackId = getCurrentMusic()?.id ?? ''
 }
 
@@ -97,7 +125,7 @@ window.addEventListener('keydown', (event) => {
 
   event.preventDefault()
 
-  if (dialog.visible) return
+  if (isMovementLocked()) return
 
   setKeyState(event.code, true)
 })
@@ -109,16 +137,11 @@ window.addEventListener('keyup', (event) => {
 
   event.preventDefault()
 
-  if (dialog.visible) return
-
   setKeyState(event.code, false)
 })
 
 window.addEventListener('blur', () => {
-  controls.down = false
-  controls.left = false
-  controls.right = false
-  controls.up = false
+  clearControls()
 })
 
 document.addEventListener('visibilitychange', () => {
@@ -138,24 +161,33 @@ const formatTime = (): string => {
   return `${hours}:${minutes} ${amPm}`
 }
 
-window.addEventListener('keydown', (event) => {
-  if (event.code !== 'KeyF') return
-
-  // During cutscene: advance to next line or finish
+const advanceDialogOrInteract = () => {
   if (cutscene.active && dialog.visible) {
     cutscene.step++
     if (cutscene.step < OPENING_LINES.length) {
-      dialog = { visible: true, message: OPENING_LINES[cutscene.step] }
+      showDialog(OPENING_LINES[cutscene.step])
     } else {
-      dialog = { visible: false, message: '' }
+      hideDialog()
       cutscene.active = false
+    }
+    return
+  }
+
+  if (bedReveal.active && dialog.visible) {
+    bedReveal.step++
+    if (bedReveal.step < BED_REVEAL_LINES.length) {
+      showDialog(BED_REVEAL_LINES[bedReveal.step])
+    } else {
+      hideDialog()
+      bedReveal.active = false
+      bedReveal.complete = true
     }
     return
   }
 
   // Normal dialog dismiss
   if (dialog.visible) {
-    dialog = { visible: false, message: '' }
+    hideDialog()
     return
   }
 
@@ -163,9 +195,23 @@ window.addEventListener('keydown', (event) => {
   if (cutscene.active) return
 
   if (!player.inBed && isInZone(player.x, player.y, ALARM_CLOCK_ZONE)) {
-    dialog = { visible: true, message: `This must be my alarm clock. It says it's ${formatTime()}.` }
-    controls.down = controls.left = controls.right = controls.up = false
+    showDialog(`This must be my alarm clock. It says it's ${formatTime()}.`)
   }
+}
+
+window.addEventListener('keydown', (event) => {
+  if (event.code !== 'KeyF') return
+
+  event.preventDefault()
+  advanceDialogOrInteract()
+})
+
+canvas.addEventListener('pointerdown', (event) => {
+  if (!event.isPrimary || event.button !== 0) {
+    return
+  }
+
+  advanceDialogOrInteract()
 })
 
 const frame = (time: number) => {
@@ -176,13 +222,26 @@ const frame = (time: number) => {
   if (cutscene.active && cutscene.step === 0 && !dialog.visible) {
     cutscene.timer -= deltaTime
     if (cutscene.timer <= 0) {
-      dialog = { visible: true, message: OPENING_LINES[0] }
+      showDialog(OPENING_LINES[0])
       cutscene.step = 0
     }
   }
 
-  if (!dialog.visible) {
-    player = stepPlayer(player, controls, deltaTime, ROOM_BOUNDS)
+  if (!isMovementLocked()) {
+    const nextPlayer = stepPlayer(player, controls, deltaTime, ROOM_BOUNDS)
+    const justLeftBed = player.inBed && !nextPlayer.inBed && !bedReveal.complete
+
+    player = justLeftBed
+      ? { ...nextPlayer, moving: false }
+      : nextPlayer
+
+    if (justLeftBed) {
+      bedReveal.active = true
+      bedReveal.step = 0
+      showDialog(BED_REVEAL_LINES[0])
+    }
+  } else if (player.moving) {
+    player = { ...player, moving: false }
   }
 
   audioManager.syncMusic(getCurrentMusic())
