@@ -54,6 +54,14 @@ let player: PlayerState = { ...INITIAL_PLAYER_STATE }
 let dialog: DialogState = { visible: false, message: '' }
 let previousTime = performance.now()
 
+// ── Opening cutscene ──
+const OPENING_LINES = [
+  '*knock knock knock*',
+  'Rise and shine, little one! Come meet me out in the garden when you\'re ready.',
+]
+
+const cutscene = { active: true, step: 0, timer: 2.0 }
+
 const syncDebugState = () => {
   app.dataset.playerX = player.x.toFixed(2)
   app.dataset.playerY = player.y.toFixed(2)
@@ -116,14 +124,29 @@ const formatTime = (): string => {
 window.addEventListener('keydown', (event) => {
   if (event.code !== 'KeyF') return
 
+  // During cutscene: advance to next line or finish
+  if (cutscene.active && dialog.visible) {
+    cutscene.step++
+    if (cutscene.step < OPENING_LINES.length) {
+      dialog = { visible: true, message: OPENING_LINES[cutscene.step] }
+    } else {
+      dialog = { visible: false, message: '' }
+      cutscene.active = false
+    }
+    return
+  }
+
+  // Normal dialog dismiss
   if (dialog.visible) {
     dialog = { visible: false, message: '' }
     return
   }
 
+  // Block interactions during cutscene (waiting for timer)
+  if (cutscene.active) return
+
   if (!player.inBed && isInZone(player.x, player.y, ALARM_CLOCK_ZONE)) {
     dialog = { visible: true, message: `This must be my alarm clock. It says it's ${formatTime()}.` }
-    // Zero out held controls so player stops immediately
     controls.down = controls.left = controls.right = controls.up = false
   }
 })
@@ -131,6 +154,15 @@ window.addEventListener('keydown', (event) => {
 const frame = (time: number) => {
   const deltaTime = Math.min((time - previousTime) / 1000, 0.05)
   previousTime = time
+
+  // Cutscene timer: show first knock after delay
+  if (cutscene.active && cutscene.step === 0 && !dialog.visible) {
+    cutscene.timer -= deltaTime
+    if (cutscene.timer <= 0) {
+      dialog = { visible: true, message: OPENING_LINES[0] }
+      cutscene.step = 0
+    }
+  }
 
   if (!dialog.visible) {
     player = stepPlayer(player, controls, deltaTime, ROOM_BOUNDS)

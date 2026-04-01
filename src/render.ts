@@ -1570,7 +1570,8 @@ const drawPlayer = (context: CanvasRenderingContext2D, player: PlayerState) => {
 const drawDialog = (context: CanvasRenderingContext2D, dialog: DialogState) => {
   if (!dialog.visible) return
 
-  const font = '13px "Trebuchet MS", "Gill Sans", sans-serif'
+  const isItalic = dialog.message.startsWith('*')
+  const font = `${isItalic ? 'italic ' : ''}13px "Trebuchet MS", "Gill Sans", sans-serif`
   const boxW = 440
   const lineHeight = 18
   const padX = 18
