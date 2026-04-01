@@ -163,6 +163,27 @@ test('leaving the bed triggers the rat reveal dialog sequence before movement re
 
     const movedAgain = await readPosition(window)
     expect(movedAgain.x).toBeLessThan(unlockedStart.x - 5)
+
+    for (let i = 0; i < 8; i++) {
+      if (await app.getAttribute('data-dialog-message') === 'What the heck is up with this tail...') {
+        break
+      }
+
+      await pressFor(window, 'a', 60)
+    }
+
+    await expect(app).toHaveAttribute('data-dialog-message', 'What the heck is up with this tail...')
+    await expect(app).toHaveAttribute('data-movement-locked', 'false')
+
+    const tailLineStart = await readPosition(window)
+    await window.keyboard.down('a')
+    await window.waitForTimeout(150)
+    await window.keyboard.up('a')
+
+    const tailLineMoved = await readPosition(window)
+    expect(tailLineMoved.x).toBeLessThan(tailLineStart.x - 5)
+
+    await expect(app).toHaveAttribute('data-dialog-visible', 'false', { timeout: 5000 })
   } finally {
     await electronApp.close()
   }
