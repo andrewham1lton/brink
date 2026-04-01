@@ -4,6 +4,11 @@ import {
   type PlayerState,
 } from './movement'
 
+export interface DialogState {
+  message: string
+  visible: boolean
+}
+
 const floorGradient = (context: CanvasRenderingContext2D) => {
   const gradient = context.createLinearGradient(0, 0, 0, CANVAS_HEIGHT)
   gradient.addColorStop(0, '#7d5432')
@@ -1562,9 +1567,86 @@ const drawPlayer = (context: CanvasRenderingContext2D, player: PlayerState) => {
   }
 }
 
+const drawDialog = (context: CanvasRenderingContext2D, dialog: DialogState) => {
+  if (!dialog.visible) return
+
+  const isItalic = dialog.message.startsWith('*')
+  const font = `${isItalic ? 'italic ' : ''}13px "Trebuchet MS", "Gill Sans", sans-serif`
+  const boxW = 440
+  const lineHeight = 18
+  const padX = 18
+  const padY = 14
+
+  // Word-wrap text into lines
+  context.font = font
+  const maxTextW = boxW - padX * 2
+  const words = dialog.message.split(' ')
+  const lines: string[] = []
+  let currentLine = words[0]
+  for (let i = 1; i < words.length; i++) {
+    const test = `${currentLine} ${words[i]}`
+    if (context.measureText(test).width > maxTextW) {
+      lines.push(currentLine)
+      currentLine = words[i]
+    } else {
+      currentLine = test
+    }
+  }
+  lines.push(currentLine)
+
+  const boxH = padY * 2 + lines.length * lineHeight + 8
+  const boxX = (CANVAS_WIDTH - boxW) / 2
+  const boxY = CANVAS_HEIGHT - boxH - 28
+
+  // Soft shadow
+  context.fillStyle = 'rgba(20, 12, 8, 0.35)'
+  context.beginPath()
+  context.roundRect(boxX + 3, boxY + 4, boxW, boxH, 12)
+  context.fill()
+
+  // Background — warm parchment
+  context.fillStyle = '#f5e6cc'
+  context.beginPath()
+  context.roundRect(boxX, boxY, boxW, boxH, 12)
+  context.fill()
+
+  // Subtle border
+  context.strokeStyle = '#c4a06a'
+  context.lineWidth = 1.5
+  context.beginPath()
+  context.roundRect(boxX, boxY, boxW, boxH, 12)
+  context.stroke()
+
+  // Text lines
+  context.fillStyle = '#3a2a18'
+  context.font = font
+  context.textAlign = 'left'
+  context.textBaseline = 'top'
+  for (let i = 0; i < lines.length; i++) {
+    context.fillText(lines[i], boxX + padX, boxY + padY + i * lineHeight)
+  }
+
+  // Bouncing downward arrowhead (à la Pokemon)
+  const arrowX = boxX + boxW - 16
+  const arrowBounce = Math.sin(sceneTime * 4) * 2
+  const arrowY = boxY + boxH - 10 + arrowBounce
+  context.fillStyle = '#9a8060'
+  context.beginPath()
+  context.moveTo(arrowX - 4, arrowY)
+  context.lineTo(arrowX + 4, arrowY)
+  context.lineTo(arrowX, arrowY + 5)
+  context.closePath()
+  context.fill()
+
+  // Reset alignment
+  context.textAlign = 'start'
+  context.textBaseline = 'alphabetic'
+}
+
 export const renderScene = (
   context: CanvasRenderingContext2D,
   player: PlayerState,
+  dialog: DialogState = { visible: false, message: '' },
 ) => {
   // Track scene-level time for idle animations & transitions
   const now = performance.now() / 1000
@@ -1624,4 +1706,6 @@ export const renderScene = (
 
   // Alarm clock always renders in front of the player
   drawAlarmClock(context)
+
+  drawDialog(context, dialog)
 }

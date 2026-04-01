@@ -48,6 +48,11 @@ export interface Rect {
 // appears as a lump. Headboard/pillows and footboard remain solid.
 export const BLANKET_ZONE: Rect = { x: 656, y: 250, width: 158, height: 74 }
 
+// Zone in front of the nightstand where the player can interact
+// with the alarm clock by pressing F (touching the front face).
+// Accounts for player radius pushing the center outside the hitbox.
+export const ALARM_CLOCK_ZONE: Rect = { x: 216, y: 308, width: 126, height: 40 }
+
 export const FURNITURE_HITBOXES: Rect[] = [
   { x: 96, y: 90, width: 142, height: 94 },    // Bookshelf
   { x: 242, y: 90, width: 108, height: 94 },    // Dresser
