@@ -173,7 +173,13 @@ test('leaving the bed triggers the rat reveal dialog sequence before movement re
       await pressFor(window, 'a', 60)
     }
 
-    await expect(app).toHaveAttribute('data-dialog-message', 'What the heck is up with this tail...')
+    await expect(app).toHaveAttribute('data-dialog-visible', 'false')
+    await expect(app).not.toHaveAttribute('data-dialog-message', 'What the heck is up with this tail...')
+
+    await window.waitForTimeout(1200)
+    await expect(app).not.toHaveAttribute('data-dialog-message', 'What the heck is up with this tail...')
+
+    await expect(app).toHaveAttribute('data-dialog-message', 'What the heck is up with this tail...', { timeout: 3000 })
     await expect(app).toHaveAttribute('data-movement-locked', 'false')
 
     const tailLineStart = await readPosition(window)

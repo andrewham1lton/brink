@@ -80,12 +80,13 @@ const BED_REVEAL_LINES = [
 ]
 const BED_REVEAL_DELAY = 0.6
 const TAIL_REACTION_LINE = 'What the heck is up with this tail...'
+const TAIL_REACTION_DELAY = 2.5
 const TAIL_REACTION_DISTANCE = 40
 const TAIL_REACTION_DURATION = 3.2
 
 const cutscene = { active: true, step: 0, timer: 2.0 }
 const bedReveal = { active: false, complete: false, delay: 0, step: 0 }
-const tailReaction = { distance: 0, shown: false }
+const tailReaction = { delay: 0, distance: 0, shown: false }
 
 const getCurrentMusic = () => resolveAreaMusic(
   currentAreaId,
@@ -222,6 +223,7 @@ const advanceDialogOrInteract = () => {
       hideBlockingDialog()
       bedReveal.active = false
       bedReveal.complete = true
+      tailReaction.delay = TAIL_REACTION_DELAY
     }
     return
   }
@@ -292,12 +294,14 @@ const frame = (time: number) => {
       bedReveal.active = true
       bedReveal.delay = BED_REVEAL_DELAY
       bedReveal.step = 0
+      tailReaction.delay = 0
       tailReaction.distance = 0
       clearControls()
     } else if (bedReveal.complete && !tailReaction.shown) {
+      tailReaction.delay = Math.max(tailReaction.delay - deltaTime, 0)
       tailReaction.distance += distanceMoved
 
-      if (tailReaction.distance >= TAIL_REACTION_DISTANCE) {
+      if (tailReaction.delay <= 0 && tailReaction.distance >= TAIL_REACTION_DISTANCE) {
         showAmbientDialog(TAIL_REACTION_LINE, TAIL_REACTION_DURATION)
         tailReaction.shown = true
       }
