@@ -550,17 +550,6 @@ const drawBedBlanket = (
       }
     }
 
-    // ── Blanket fold line — warps around the lump ──
-    context.strokeStyle = 'rgba(30, 50, 70, 0.3)'
-    context.lineWidth = 2
-    context.beginPath()
-    context.moveTo(BK.x + 4, BK.y + 4)
-    const foldLeftX = Math.max(BK.x + 4, lumpX - lumpW - 12)
-    const foldRightX = Math.min(BK.x + BK.w - 4, lumpX + lumpW + 12)
-    context.quadraticCurveTo(foldLeftX, BK.y + 4, foldLeftX, BK.y + 2)
-    context.quadraticCurveTo(lumpX, BK.y - lumpH * 0.6 + wobble, foldRightX, BK.y + 2)
-    context.quadraticCurveTo(foldRightX, BK.y + 4, BK.x + BK.w - 4, BK.y + 4)
-    context.stroke()
 
     // ── Ears poking out at the top edge when near pillows ──
     const nearTop = lumpY < BK.y + 28
