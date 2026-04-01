@@ -44,19 +44,18 @@ export interface Rect {
   y: number
 }
 
+// The blanket zone — the walkable area of the bed where the mouse
+// appears as a lump. Headboard/pillows and footboard remain solid.
+export const BLANKET_ZONE: Rect = { x: 656, y: 250, width: 158, height: 74 }
+
 export const FURNITURE_HITBOXES: Rect[] = [
   { x: 96, y: 90, width: 142, height: 94 },    // Bookshelf
   { x: 242, y: 90, width: 108, height: 94 },    // Dresser
-  { x: 236, y: 222, width: 68, height: 86 },      // Nightstand (full body + legs)
-  { x: 636, y: 168, width: 194, height: 182 },  // Bed
+  { x: 236, y: 222, width: 68, height: 86 },    // Nightstand (full body + legs)
+  { x: 636, y: 168, width: 194, height: 84 },   // Bed — headboard + pillows (top block)
+  { x: 636, y: 322, width: 194, height: 28 },   // Bed — footboard (bottom block)
   { x: 826, y: 40, width: 134, height: 152 },   // Closed door + frame
 ]
-
-// Bed center position for tucking in
-export const BED_CENTER = { x: 735, y: 280 }
-
-// Bed hitbox index in FURNITURE_HITBOXES
-export const BED_HITBOX_INDEX = 3
 
 export const INITIAL_PLAYER_STATE: PlayerState = {
   animationTime: 0,
@@ -115,44 +114,10 @@ const resolveCircleRect = (
   return { x: cx, y: rect.y + rect.height + radius }
 }
 
-export const isNearBed = (player: PlayerState): boolean => {
-  const bed = FURNITURE_HITBOXES[BED_HITBOX_INDEX]
-  const margin = 8
-  const expanded = {
-    x: bed.x - margin,
-    y: bed.y - margin,
-    width: bed.width + margin * 2,
-    height: bed.height + margin * 2,
-  }
-  const nearestX = clamp(player.x, expanded.x, expanded.x + expanded.width)
-  const nearestY = clamp(player.y, expanded.y, expanded.y + expanded.height)
-  const dx = player.x - nearestX
-  const dy = player.y - nearestY
-  return dx * dx + dy * dy < (player.radius + margin) * (player.radius + margin)
-}
-
-export const toggleBed = (player: PlayerState): PlayerState => {
-  if (player.inBed) {
-    // Get out of bed — place player at foot of bed
-    return {
-      ...player,
-      inBed: false,
-      moving: false,
-      x: 735,
-      y: 365,
-      facing: 'down',
-    }
-  }
-  if (isNearBed(player)) {
-    return {
-      ...player,
-      inBed: true,
-      moving: false,
-      x: BED_CENTER.x,
-      y: BED_CENTER.y,
-    }
-  }
-  return player
+export const isInBlanketZone = (x: number, y: number, radius: number): boolean => {
+  const z = BLANKET_ZONE
+  return x + radius > z.x && x - radius < z.x + z.width
+    && y + radius > z.y && y - radius < z.y + z.height
 }
 
 export const stepPlayer = (
@@ -162,10 +127,6 @@ export const stepPlayer = (
   bounds: RoomBounds,
   hitboxes: Rect[] = FURNITURE_HITBOXES,
 ): PlayerState => {
-  if (player.inBed) {
-    return { ...player, moving: false }
-  }
-
   const horizontal = Number(controls.right) - Number(controls.left)
   const vertical = Number(controls.down) - Number(controls.up)
   const magnitude = Math.hypot(horizontal, vertical)
@@ -176,7 +137,9 @@ export const stepPlayer = (
 
   const normalizedX = horizontal / magnitude
   const normalizedY = vertical / magnitude
-  const distance = player.speed * deltaTime
+  // Move slower when under the covers
+  const speedMultiplier = player.inBed ? 0.45 : 1
+  const distance = player.speed * speedMultiplier * deltaTime
   let facing: Facing
   if (vertical < 0 && horizontal === 0) {
     facing = 'up'
@@ -208,10 +171,13 @@ export const stepPlayer = (
   newX = clamp(newX, bounds.minX, bounds.maxX)
   newY = clamp(newY, bounds.minY, bounds.maxY)
 
+  const inBed = isInBlanketZone(newX, newY, player.radius)
+
   return {
     ...player,
     animationTime: player.animationTime + deltaTime,
     facing,
+    inBed,
     moving: true,
     x: newX,
     y: newY,

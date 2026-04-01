@@ -468,104 +468,181 @@ const drawFurniture = (context: CanvasRenderingContext2D) => {
   context.fill()
 }
 
-const drawBedBlanket = (context: CanvasRenderingContext2D, inBed: boolean) => {
-  if (inBed) {
-    // Cute mouse lump under the blanket — gentle breathing animation
-    const breathe = Math.sin(sceneTime * 2.0) * 1.5
+// Blanket bounds for clamping the lump drawing
+const BK = { x: 656, y: 250, w: 158, h: 74 }
 
-    // Lump shape — a rounded bump in the middle of the blanket
-    const lumpX = 715
-    const lumpY = 272
-    const lumpW = 50
-    const lumpH = 22 + breathe
-
+const drawBedBlanket = (
+  context: CanvasRenderingContext2D,
+  player: PlayerState,
+) => {
+  if (player.inBed) {
+    // ── Base blanket layer ──
     context.fillStyle = '#4a6a8a'
     context.beginPath()
-    context.roundRect(656, 250, 158, 74, [0, 0, 6, 6])
+    context.roundRect(BK.x, BK.y, BK.w, BK.h, [0, 0, 6, 6])
     context.fill()
 
-    // The lump itself — slightly lighter shade to show the bump
-    context.save()
-    context.fillStyle = '#527a96'
+    // ── The lump follows the mouse's actual position ──
+    const lumpX = player.x
+    const lumpY = player.y
+    const breathe = Math.sin(sceneTime * 2.0) * 2.0
+    const lumpW = 40
+    const lumpH = 24 + breathe
+
+    // When moving, the lump stretches in travel direction, wobbles, and jiggles
+    const wobble = player.moving ? Math.sin(sceneTime * 14) * 2.5 : 0
+    const stretchX = player.moving ? 8 : 0
+    const stretchY = player.moving ? -4 : 0
+
+    // Lump shadow — dark ring at the base for depth
+    context.fillStyle = 'rgba(20, 40, 60, 0.18)'
     context.beginPath()
-    context.ellipse(lumpX, lumpY + 6, lumpW, lumpH, 0, Math.PI, 0)
+    context.ellipse(lumpX, lumpY + 5, lumpW + 8 + stretchX, 7, 0, 0, Math.PI * 2)
     context.fill()
-    context.restore()
 
-    // Lump highlight — light catching the top of the bump
-    context.fillStyle = 'rgba(255, 255, 255, 0.08)'
+    // Main lump body — noticeably lighter than the blanket
+    context.fillStyle = '#5d8aaa'
     context.beginPath()
-    context.ellipse(lumpX, lumpY + 2, lumpW - 6, lumpH - 6, 0, Math.PI, 0)
+    context.ellipse(
+      lumpX, lumpY + 2 + wobble,
+      lumpW + stretchX, lumpH + stretchY,
+      0, Math.PI, 0,
+    )
     context.fill()
 
-    // Lump shadow at base
-    context.fillStyle = 'rgba(20, 40, 60, 0.15)'
+    // Lump mid-tone — subtle gradient effect
+    context.fillStyle = '#6898b4'
     context.beginPath()
-    context.ellipse(lumpX, lumpY + 8, lumpW + 4, 5, 0, 0, Math.PI * 2)
+    context.ellipse(
+      lumpX, lumpY - 1 + wobble,
+      lumpW - 6 + stretchX, lumpH - 5 + stretchY,
+      0, Math.PI, 0,
+    )
     context.fill()
 
-    // Blanket fold line — follows the lump shape
+    // Lump highlight — light catching the peak
+    context.fillStyle = 'rgba(255, 255, 255, 0.13)'
+    context.beginPath()
+    context.ellipse(
+      lumpX, lumpY - 4 + wobble,
+      lumpW - 14 + stretchX, lumpH - 10 + stretchY,
+      0, Math.PI, 0,
+    )
+    context.fill()
+
+    // ── Blanket wrinkles radiating from the lump ──
+    context.strokeStyle = 'rgba(30, 50, 70, 0.22)'
+    context.lineWidth = 1.2
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2 + sceneTime * 0.12
+      const innerR = lumpW + 4 + stretchX
+      const outerR = innerR + 18 + Math.sin(angle * 3) * 5
+      const sx = lumpX + Math.cos(angle) * innerR
+      const sy = lumpY + Math.sin(angle) * (innerR * 0.38)
+      const ex = lumpX + Math.cos(angle) * outerR
+      const ey = lumpY + Math.sin(angle) * (outerR * 0.38)
+      if (sx > BK.x + 4 && sx < BK.x + BK.w - 4
+        && sy > BK.y + 2 && sy < BK.y + BK.h - 2) {
+        context.beginPath()
+        context.moveTo(sx, sy)
+        context.lineTo(ex, ey)
+        context.stroke()
+      }
+    }
+
+    // ── Blanket fold line — warps around the lump ──
     context.strokeStyle = 'rgba(30, 50, 70, 0.3)'
     context.lineWidth = 2
     context.beginPath()
-    context.moveTo(660, 254)
-    context.quadraticCurveTo(690, 252, 700, 250)
-    // Go over the lump
-    context.quadraticCurveTo(715, 250 - lumpH * 0.3, 730, 250)
-    context.quadraticCurveTo(760, 252, 810, 254)
+    context.moveTo(BK.x + 4, BK.y + 4)
+    const foldLeftX = Math.max(BK.x + 4, lumpX - lumpW - 12)
+    const foldRightX = Math.min(BK.x + BK.w - 4, lumpX + lumpW + 12)
+    context.quadraticCurveTo(foldLeftX, BK.y + 4, foldLeftX, BK.y + 2)
+    context.quadraticCurveTo(lumpX, BK.y - lumpH * 0.6 + wobble, foldRightX, BK.y + 2)
+    context.quadraticCurveTo(foldRightX, BK.y + 4, BK.x + BK.w - 4, BK.y + 4)
     context.stroke()
 
-    // Tiny ears poking out near the pillow edge — so cute!
-    const earY = 244 + Math.sin(sceneTime * 1.3) * 0.5
-    // Left ear
-    context.fillStyle = '#8b6b50'
-    context.beginPath()
-    context.ellipse(706, earY, 5, 7, -0.2, 0, Math.PI * 2)
-    context.fill()
-    // Inner ear
-    context.fillStyle = '#d4a0a0'
-    context.beginPath()
-    context.ellipse(706, earY + 0.5, 3, 4.5, -0.2, 0, Math.PI * 2)
-    context.fill()
-    // Right ear
-    context.fillStyle = '#8b6b50'
-    context.beginPath()
-    context.ellipse(720, earY - 1, 5, 7, 0.2, 0, Math.PI * 2)
-    context.fill()
-    // Inner ear
-    context.fillStyle = '#d4a0a0'
-    context.beginPath()
-    context.ellipse(720, earY - 0.5, 3, 4.5, 0.2, 0, Math.PI * 2)
-    context.fill()
+    // ── Ears poking out at the top edge when near pillows ──
+    const nearTop = lumpY < BK.y + 28
+    if (nearTop) {
+      const earBase = BK.y - 1
+      const earBob = Math.sin(sceneTime * 1.3) * 0.6
+      const earSpread = 7
+      // Left ear
+      context.fillStyle = '#8b6b50'
+      context.beginPath()
+      context.ellipse(lumpX - earSpread, earBase + earBob, 5, 7, -0.2, 0, Math.PI * 2)
+      context.fill()
+      context.fillStyle = '#d4a0a0'
+      context.beginPath()
+      context.ellipse(lumpX - earSpread, earBase + earBob + 0.5, 3, 4.5, -0.2, 0, Math.PI * 2)
+      context.fill()
+      // Right ear
+      context.fillStyle = '#8b6b50'
+      context.beginPath()
+      context.ellipse(lumpX + earSpread, earBase + earBob - 1, 5, 7, 0.2, 0, Math.PI * 2)
+      context.fill()
+      context.fillStyle = '#d4a0a0'
+      context.beginPath()
+      context.ellipse(lumpX + earSpread, earBase + earBob - 0.5, 3, 4.5, 0.2, 0, Math.PI * 2)
+      context.fill()
+    }
 
-    // Tiny tail poking out from the foot end of the blanket
-    const tailWag = Math.sin(sceneTime * 1.6) * 4
-    context.strokeStyle = '#8b6b50'
-    context.lineWidth = 2.5
-    context.lineCap = 'round'
-    context.beginPath()
-    context.moveTo(740, 318)
-    context.quadraticCurveTo(748 + tailWag, 310, 752 + tailWag * 0.6, 298)
-    context.stroke()
-    context.lineCap = 'butt'
+    // ── Tail poking out at the bottom edge when near footboard ──
+    const nearBottom = lumpY > BK.y + BK.h - 34
+    if (nearBottom) {
+      const tailWag = Math.sin(sceneTime * 1.6) * 5
+      const tailBaseY = BK.y + BK.h + 2
+      context.strokeStyle = '#8b6b50'
+      context.lineWidth = 2.5
+      context.lineCap = 'round'
+      context.beginPath()
+      context.moveTo(lumpX + 4, tailBaseY)
+      context.quadraticCurveTo(
+        lumpX + 12 + tailWag, tailBaseY + 8,
+        lumpX + 16 + tailWag * 0.6, tailBaseY + 18,
+      )
+      context.stroke()
+      context.lineCap = 'butt'
+    }
+
+    // ── Tail poking out left/right edge when near the side ──
+    const nearLeft = lumpX < BK.x + 40
+    const nearRight = lumpX > BK.x + BK.w - 40
+    if (nearLeft || nearRight) {
+      const tailWag = Math.sin(sceneTime * 1.6) * 4
+      const sign = nearLeft ? -1 : 1
+      const edgeX = nearLeft ? BK.x - 1 : BK.x + BK.w + 1
+      context.strokeStyle = '#8b6b50'
+      context.lineWidth = 2.5
+      context.lineCap = 'round'
+      context.beginPath()
+      context.moveTo(edgeX, lumpY + 2)
+      context.quadraticCurveTo(
+        edgeX + sign * 10, lumpY + tailWag,
+        edgeX + sign * 18, lumpY - 6 + tailWag * 0.6,
+      )
+      context.stroke()
+      context.lineCap = 'butt'
+    }
   } else {
-    // Normal blanket (no mouse in bed)
+    // ── Normal blanket (no mouse) ──
     context.fillStyle = '#4a6a8a'
     context.beginPath()
-    context.roundRect(656, 250, 158, 74, [0, 0, 6, 6])
+    context.roundRect(BK.x, BK.y, BK.w, BK.h, [0, 0, 6, 6])
     context.fill()
 
     // Blanket fold line
     context.strokeStyle = 'rgba(30, 50, 70, 0.3)'
     context.lineWidth = 2
     context.beginPath()
-    context.moveTo(660, 254)
-    context.quadraticCurveTo(735, 246, 810, 254)
+    context.moveTo(BK.x + 4, BK.y + 4)
+    context.quadraticCurveTo(BK.x + BK.w / 2, BK.y - 4, BK.x + BK.w - 4, BK.y + 4)
     context.stroke()
 
     // Blanket highlight
     context.fillStyle = 'rgba(255, 255, 255, 0.06)'
-    context.fillRect(656, 256, 158, 8)
+    context.fillRect(BK.x, BK.y + 6, BK.w, 8)
   }
 }
 
@@ -1554,7 +1631,7 @@ export const renderScene = (
   drawFurniture(context)
 
   // Blanket draws on top of mattress (and mouse lump if in bed)
-  drawBedBlanket(context, player.inBed)
+  drawBedBlanket(context, player)
 
   // Depth sorting: nightstand body renders on top when player is behind
   const NIGHTSTAND_DEPTH_Y = 248
