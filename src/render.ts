@@ -482,6 +482,12 @@ const drawBedBlanket = (
     context.roundRect(BK.x, BK.y, BK.w, BK.h, [0, 0, 6, 6])
     context.fill()
 
+    // Clip all lump drawing to the blanket rectangle
+    context.save()
+    context.beginPath()
+    context.roundRect(BK.x, BK.y, BK.w, BK.h, [0, 0, 6, 6])
+    context.clip()
+
     // ── The lump follows the mouse's actual position ──
     const lumpX = player.x
     const lumpY = player.y
@@ -550,6 +556,9 @@ const drawBedBlanket = (
       }
     }
 
+
+    // Restore clip so ears can poke above the blanket
+    context.restore()
 
     // ── Ears poking out at the top edge when near pillows ──
     const nearTop = lumpY < BK.y + 28
