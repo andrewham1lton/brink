@@ -1,6 +1,7 @@
 import './style.css'
 import { AudioManager, installAudioUnlock } from './audio'
 import { resolveAreaMusic, type AreaId } from './areas'
+import knockSfxUrl from './assets/audio/sfx/three-knocks-denoised-sfx.wav'
 import {
   ALARM_CLOCK_ZONE,
   CANVAS_HEIGHT,
@@ -67,6 +68,11 @@ const OPENING_LINES = [
   '*knock knock knock*',
   'Rise and shine, little one! Come meet me out in the garden when you\'re ready.',
 ]
+const OPENING_KNOCK_EFFECT = {
+  id: 'opening-knock',
+  src: knockSfxUrl,
+  volume: 0.85,
+}
 const BED_REVEAL_LINES = [
   'Oh.',
   'I\'m a rat.',
@@ -138,6 +144,7 @@ const syncDebugState = () => {
   app.dataset.cutsceneActive = String(cutscene.active)
   app.dataset.dialogMessage = dialog.message
   app.dataset.dialogVisible = String(dialog.visible)
+  app.dataset.lastSfxId = audioManager.getLastEffectId() ?? ''
   app.dataset.movementLocked = String(isMovementLocked())
   app.dataset.musicTrackId = getCurrentMusic()?.id ?? ''
 }
@@ -258,6 +265,7 @@ const frame = (time: number) => {
   if (cutscene.active && cutscene.step === 0 && !blockingDialog.visible) {
     cutscene.timer -= deltaTime
     if (cutscene.timer <= 0) {
+      audioManager.playEffect(OPENING_KNOCK_EFFECT)
       showBlockingDialog(OPENING_LINES[0])
       cutscene.step = 0
     }
