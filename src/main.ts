@@ -132,7 +132,9 @@ const frame = (time: number) => {
   const deltaTime = Math.min((time - previousTime) / 1000, 0.05)
   previousTime = time
 
-  player = stepPlayer(player, controls, deltaTime, ROOM_BOUNDS)
+  if (!dialog.visible) {
+    player = stepPlayer(player, controls, deltaTime, ROOM_BOUNDS)
+  }
   renderScene(context, player, dialog)
   syncDebugState()
 
