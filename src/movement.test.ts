@@ -31,7 +31,7 @@ describe('stepPlayer', () => {
   it('normalizes diagonal movement speed', () => {
     // Place player in center of a large bounds so clamping doesn't interfere
     const largeBounds = { minX: 0, maxX: 2000, minY: 0, maxY: 2000 }
-    const centeredPlayer = { ...INITIAL_PLAYER_STATE, x: 1000, y: 1000 }
+    const centeredPlayer = { ...INITIAL_PLAYER_STATE, x: 1000, y: 1000, inBed: false }
     const next = stepPlayer(
       centeredPlayer,
       { ...neutralControls(), right: true, up: true },
