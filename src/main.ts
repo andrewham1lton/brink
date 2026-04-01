@@ -122,7 +122,7 @@ window.addEventListener('keydown', (event) => {
   }
 
   if (!player.inBed && isInZone(player.x, player.y, ALARM_CLOCK_ZONE)) {
-    dialog = { visible: true, message: `It's ${formatTime()}` }
+    dialog = { visible: true, message: `I guess this is my alarm clock. It says it's ${formatTime()}.` }
     // Zero out held controls so player stops immediately
     controls.down = controls.left = controls.right = controls.up = false
   }

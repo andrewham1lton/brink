@@ -1570,9 +1570,30 @@ const drawPlayer = (context: CanvasRenderingContext2D, player: PlayerState) => {
 const drawDialog = (context: CanvasRenderingContext2D, dialog: DialogState) => {
   if (!dialog.visible) return
 
-  const text = dialog.message
-  const boxW = 180
-  const boxH = 52
+  const font = '13px "Trebuchet MS", "Gill Sans", sans-serif'
+  const boxW = 320
+  const lineHeight = 18
+  const padX = 18
+  const padY = 14
+
+  // Word-wrap text into lines
+  context.font = font
+  const maxTextW = boxW - padX * 2
+  const words = dialog.message.split(' ')
+  const lines: string[] = []
+  let currentLine = words[0]
+  for (let i = 1; i < words.length; i++) {
+    const test = `${currentLine} ${words[i]}`
+    if (context.measureText(test).width > maxTextW) {
+      lines.push(currentLine)
+      currentLine = words[i]
+    } else {
+      currentLine = test
+    }
+  }
+  lines.push(currentLine)
+
+  const boxH = padY * 2 + lines.length * lineHeight + 8
   const boxX = (CANVAS_WIDTH - boxW) / 2
   const boxY = CANVAS_HEIGHT - boxH - 28
 
@@ -1595,12 +1616,14 @@ const drawDialog = (context: CanvasRenderingContext2D, dialog: DialogState) => {
   context.roundRect(boxX, boxY, boxW, boxH, 12)
   context.stroke()
 
-  // Text
+  // Text lines
   context.fillStyle = '#3a2a18'
-  context.font = '14px "Trebuchet MS", "Gill Sans", sans-serif'
-  context.textAlign = 'center'
-  context.textBaseline = 'middle'
-  context.fillText(text, boxX + boxW / 2, boxY + boxH / 2 - 4)
+  context.font = font
+  context.textAlign = 'left'
+  context.textBaseline = 'top'
+  for (let i = 0; i < lines.length; i++) {
+    context.fillText(lines[i], boxX + padX, boxY + padY + i * lineHeight)
+  }
 
   // Bouncing downward arrowhead (à la Pokemon)
   const arrowX = boxX + boxW - 16
