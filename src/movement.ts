@@ -59,13 +59,13 @@ export const FURNITURE_HITBOXES: Rect[] = [
 
 export const INITIAL_PLAYER_STATE: PlayerState = {
   animationTime: 0,
-  facing: 'right',
-  inBed: false,
+  facing: 'down',
+  inBed: true,
   moving: false,
   radius: 18,
   speed: 220,
-  x: CANVAS_WIDTH / 2,
-  y: CANVAS_HEIGHT / 2 + 52,
+  x: 735,
+  y: 287,
 }
 
 export const MOVEMENT_KEYS: Record<string, Direction> = {
