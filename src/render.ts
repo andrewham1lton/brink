@@ -4,6 +4,11 @@ import {
   type PlayerState,
 } from './movement'
 
+export interface DialogState {
+  message: string
+  visible: boolean
+}
+
 const floorGradient = (context: CanvasRenderingContext2D) => {
   const gradient = context.createLinearGradient(0, 0, 0, CANVAS_HEIGHT)
   gradient.addColorStop(0, '#7d5432')
@@ -1562,9 +1567,55 @@ const drawPlayer = (context: CanvasRenderingContext2D, player: PlayerState) => {
   }
 }
 
+const drawDialog = (context: CanvasRenderingContext2D, dialog: DialogState) => {
+  if (!dialog.visible) return
+
+  const text = dialog.message
+  const boxW = 180
+  const boxH = 52
+  const boxX = (CANVAS_WIDTH - boxW) / 2
+  const boxY = CANVAS_HEIGHT - boxH - 28
+
+  // Soft shadow
+  context.fillStyle = 'rgba(20, 12, 8, 0.35)'
+  context.beginPath()
+  context.roundRect(boxX + 3, boxY + 4, boxW, boxH, 12)
+  context.fill()
+
+  // Background — warm parchment
+  context.fillStyle = '#f5e6cc'
+  context.beginPath()
+  context.roundRect(boxX, boxY, boxW, boxH, 12)
+  context.fill()
+
+  // Subtle border
+  context.strokeStyle = '#c4a06a'
+  context.lineWidth = 1.5
+  context.beginPath()
+  context.roundRect(boxX, boxY, boxW, boxH, 12)
+  context.stroke()
+
+  // Text
+  context.fillStyle = '#3a2a18'
+  context.font = '14px "Trebuchet MS", "Gill Sans", sans-serif'
+  context.textAlign = 'center'
+  context.textBaseline = 'middle'
+  context.fillText(text, boxX + boxW / 2, boxY + boxH / 2 - 4)
+
+  // Dismiss hint
+  context.fillStyle = '#9a8060'
+  context.font = '9px "Trebuchet MS", "Gill Sans", sans-serif'
+  context.fillText('press F', boxX + boxW / 2, boxY + boxH - 10)
+
+  // Reset alignment
+  context.textAlign = 'start'
+  context.textBaseline = 'alphabetic'
+}
+
 export const renderScene = (
   context: CanvasRenderingContext2D,
   player: PlayerState,
+  dialog: DialogState = { visible: false, message: '' },
 ) => {
   // Track scene-level time for idle animations & transitions
   const now = performance.now() / 1000
@@ -1624,4 +1675,6 @@ export const renderScene = (
 
   // Alarm clock always renders in front of the player
   drawAlarmClock(context)
+
+  drawDialog(context, dialog)
 }

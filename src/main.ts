@@ -1,5 +1,6 @@
 import './style.css'
 import {
+  ALARM_CLOCK_ZONE,
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
   INITIAL_PLAYER_STATE,
@@ -9,7 +10,7 @@ import {
   type ControlsState,
   type PlayerState,
 } from './movement'
-import { renderScene } from './render'
+import { type DialogState, renderScene } from './render'
 
 const app = document.querySelector<HTMLDivElement>('#app')
 
@@ -50,6 +51,7 @@ const controls: ControlsState = {
 }
 
 let player: PlayerState = { ...INITIAL_PLAYER_STATE }
+let dialog: DialogState = { visible: false, message: '' }
 let previousTime = performance.now()
 
 const syncDebugState = () => {
@@ -73,6 +75,9 @@ window.addEventListener('keydown', (event) => {
   }
 
   event.preventDefault()
+
+  if (dialog.visible) return
+
   setKeyState(event.code, true)
 })
 
@@ -82,6 +87,9 @@ window.addEventListener('keyup', (event) => {
   }
 
   event.preventDefault()
+
+  if (dialog.visible) return
+
   setKeyState(event.code, false)
 })
 
@@ -92,17 +100,45 @@ window.addEventListener('blur', () => {
   controls.up = false
 })
 
+const isInZone = (px: number, py: number, zone: typeof ALARM_CLOCK_ZONE) =>
+  px >= zone.x && px <= zone.x + zone.width
+  && py >= zone.y && py <= zone.y + zone.height
+
+const formatTime = (): string => {
+  const now = new Date()
+  let hours = now.getHours()
+  const minutes = now.getMinutes().toString().padStart(2, '0')
+  const amPm = hours >= 12 ? 'PM' : 'AM'
+  hours = hours % 12 || 12
+  return `${hours}:${minutes} ${amPm}`
+}
+
+window.addEventListener('keydown', (event) => {
+  if (event.code !== 'KeyF') return
+
+  if (dialog.visible) {
+    dialog = { visible: false, message: '' }
+    return
+  }
+
+  if (!player.inBed && isInZone(player.x, player.y, ALARM_CLOCK_ZONE)) {
+    dialog = { visible: true, message: `It's ${formatTime()}` }
+    // Zero out held controls so player stops immediately
+    controls.down = controls.left = controls.right = controls.up = false
+  }
+})
+
 const frame = (time: number) => {
   const deltaTime = Math.min((time - previousTime) / 1000, 0.05)
   previousTime = time
 
   player = stepPlayer(player, controls, deltaTime, ROOM_BOUNDS)
-  renderScene(context, player)
+  renderScene(context, player, dialog)
   syncDebugState()
 
   window.requestAnimationFrame(frame)
 }
 
-renderScene(context, player)
+renderScene(context, player, dialog)
 syncDebugState()
 window.requestAnimationFrame(frame)
