@@ -1,4 +1,6 @@
 import './style.css'
+import { AudioManager, installAudioUnlock } from './audio'
+import { resolveAreaMusic, type AreaId } from './areas'
 import {
   ALARM_CLOCK_ZONE,
   CANVAS_HEIGHT,
@@ -53,6 +55,10 @@ const controls: ControlsState = {
 let player: PlayerState = { ...INITIAL_PLAYER_STATE }
 let dialog: DialogState = { visible: false, message: '' }
 let previousTime = performance.now()
+const currentAreaId: AreaId = 'bedroom'
+const audioManager = new AudioManager()
+
+installAudioUnlock(window, audioManager)
 
 // ── Opening cutscene ──
 const OPENING_LINES = [
@@ -62,9 +68,16 @@ const OPENING_LINES = [
 
 const cutscene = { active: true, step: 0, timer: 2.0 }
 
+const getCurrentMusic = () => resolveAreaMusic(
+  currentAreaId,
+  cutscene.active ? 'cutscene' : 'ambient',
+)
+
 const syncDebugState = () => {
   app.dataset.playerX = player.x.toFixed(2)
   app.dataset.playerY = player.y.toFixed(2)
+  app.dataset.areaId = currentAreaId
+  app.dataset.musicTrackId = getCurrentMusic()?.id ?? ''
 }
 
 const setKeyState = (code: string, pressed: boolean) => {
@@ -106,6 +119,10 @@ window.addEventListener('blur', () => {
   controls.left = false
   controls.right = false
   controls.up = false
+})
+
+document.addEventListener('visibilitychange', () => {
+  audioManager.setAppActive(document.visibilityState === 'visible')
 })
 
 const isInZone = (px: number, py: number, zone: typeof ALARM_CLOCK_ZONE) =>
@@ -167,12 +184,15 @@ const frame = (time: number) => {
   if (!dialog.visible) {
     player = stepPlayer(player, controls, deltaTime, ROOM_BOUNDS)
   }
+
+  audioManager.syncMusic(getCurrentMusic())
   renderScene(context, player, dialog)
   syncDebugState()
 
   window.requestAnimationFrame(frame)
 }
 
+audioManager.syncMusic(getCurrentMusic())
 renderScene(context, player, dialog)
 syncDebugState()
 window.requestAnimationFrame(frame)

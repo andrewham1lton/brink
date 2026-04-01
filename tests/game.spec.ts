@@ -15,6 +15,23 @@ const readPosition = async (window: Page) => {
   return { x, y }
 }
 
+test('the bedroom area boots with its home music track selected', async () => {
+  const electronApp = await electron.launch({
+    args: ['.'],
+    cwd: projectRoot,
+  })
+
+  try {
+    const window = await electronApp.firstWindow()
+    const app = window.locator('#app')
+
+    await expect(app).toHaveAttribute('data-area-id', 'bedroom')
+    await expect(app).toHaveAttribute('data-music-track-id', 'home')
+  } finally {
+    await electronApp.close()
+  }
+})
+
 test('the player moves around the room with WASD', async () => {
   const electronApp = await electron.launch({
     args: ['.'],
