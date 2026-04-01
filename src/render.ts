@@ -588,43 +588,6 @@ const drawBedBlanket = (
       context.fill()
     }
 
-    // ── Tail poking out at the bottom edge when near footboard ──
-    const nearBottom = lumpY > BK.y + BK.h - 34
-    if (nearBottom) {
-      const tailWag = Math.sin(sceneTime * 1.6) * 5
-      const tailBaseY = BK.y + BK.h + 2
-      context.strokeStyle = '#8b6b50'
-      context.lineWidth = 2.5
-      context.lineCap = 'round'
-      context.beginPath()
-      context.moveTo(lumpX + 4, tailBaseY)
-      context.quadraticCurveTo(
-        lumpX + 12 + tailWag, tailBaseY + 8,
-        lumpX + 16 + tailWag * 0.6, tailBaseY + 18,
-      )
-      context.stroke()
-      context.lineCap = 'butt'
-    }
-
-    // ── Tail poking out left/right edge when near the side ──
-    const nearLeft = lumpX < BK.x + 40
-    const nearRight = lumpX > BK.x + BK.w - 40
-    if (nearLeft || nearRight) {
-      const tailWag = Math.sin(sceneTime * 1.6) * 4
-      const sign = nearLeft ? -1 : 1
-      const edgeX = nearLeft ? BK.x - 1 : BK.x + BK.w + 1
-      context.strokeStyle = '#8b6b50'
-      context.lineWidth = 2.5
-      context.lineCap = 'round'
-      context.beginPath()
-      context.moveTo(edgeX, lumpY + 2)
-      context.quadraticCurveTo(
-        edgeX + sign * 10, lumpY + tailWag,
-        edgeX + sign * 18, lumpY - 6 + tailWag * 0.6,
-      )
-      context.stroke()
-      context.lineCap = 'butt'
-    }
   } else {
     // ── Normal blanket (no mouse) ──
     context.fillStyle = '#4a6a8a'
