@@ -1602,10 +1602,17 @@ const drawDialog = (context: CanvasRenderingContext2D, dialog: DialogState) => {
   context.textBaseline = 'middle'
   context.fillText(text, boxX + boxW / 2, boxY + boxH / 2 - 4)
 
-  // Dismiss hint
+  // Bouncing downward arrowhead (à la Pokemon)
+  const arrowX = boxX + boxW - 16
+  const arrowBounce = Math.sin(sceneTime * 4) * 2
+  const arrowY = boxY + boxH - 10 + arrowBounce
   context.fillStyle = '#9a8060'
-  context.font = '9px "Trebuchet MS", "Gill Sans", sans-serif'
-  context.fillText('press F', boxX + boxW / 2, boxY + boxH - 10)
+  context.beginPath()
+  context.moveTo(arrowX - 4, arrowY)
+  context.lineTo(arrowX + 4, arrowY)
+  context.lineTo(arrowX, arrowY + 5)
+  context.closePath()
+  context.fill()
 
   // Reset alignment
   context.textAlign = 'start'
