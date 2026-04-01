@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { AudioManager } from './audio'
 import type { AudioPlayback } from './audio'
+import type { SoundEffectDefinition } from './audio'
 import type { MusicTrackDefinition } from './areas'
 
 class FakeAudio implements AudioPlayback {
@@ -23,6 +24,12 @@ const homeTrack: MusicTrackDefinition = {
   loop: true,
   src: '/audio/home.wav',
   volume: 0.55,
+}
+
+const knockEffect: SoundEffectDefinition = {
+  id: 'opening-knock',
+  src: '/audio/three-knocks.wav',
+  volume: 0.85,
 }
 
 describe('AudioManager', () => {
@@ -89,5 +96,24 @@ describe('AudioManager', () => {
 
     expect(created[0]?.pause).toHaveBeenCalledTimes(1)
     expect(created[0]?.play).toHaveBeenCalledTimes(2)
+  })
+
+  it('plays one-shot sound effects and records the most recent effect id', () => {
+    const created: FakeAudio[] = []
+    const manager = new AudioManager((src) => {
+      const audio = new FakeAudio(src)
+      created.push(audio)
+      return audio
+    })
+
+    manager.playEffect(knockEffect)
+
+    expect(created).toHaveLength(1)
+    expect(created[0]?.src).toBe(knockEffect.src)
+    expect(created[0]?.loop).toBe(false)
+    expect(created[0]?.preload).toBe('auto')
+    expect(created[0]?.volume).toBe(knockEffect.volume)
+    expect(created[0]?.play).toHaveBeenCalledTimes(1)
+    expect(manager.getLastEffectId()).toBe(knockEffect.id)
   })
 })

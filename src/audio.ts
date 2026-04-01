@@ -11,6 +11,12 @@ export interface AudioPlayback {
 
 export type AudioFactory = (src: string) => AudioPlayback
 
+export interface SoundEffectDefinition {
+  id: string
+  src: string
+  volume?: number
+}
+
 export interface AudioUnlockTarget {
   addEventListener: (
     type: 'keydown' | 'pointerdown',
@@ -29,6 +35,7 @@ export class AudioManager {
   private appActive = true
   private currentMusic: AudioPlayback | null = null
   private currentMusicTrackId: string | null = null
+  private lastEffectId: string | null = null
   private readonly createAudio: AudioFactory
 
   constructor(createAudio: AudioFactory = defaultAudioFactory) {
@@ -83,6 +90,20 @@ export class AudioManager {
     }
 
     this.tryPlay(this.currentMusic)
+  }
+
+  playEffect(effect: SoundEffectDefinition) {
+    const audio = this.createAudio(effect.src)
+    audio.loop = false
+    audio.preload = 'auto'
+    audio.volume = effect.volume ?? 1
+
+    this.lastEffectId = effect.id
+    this.tryPlay(audio)
+  }
+
+  getLastEffectId() {
+    return this.lastEffectId
   }
 
   stopMusic() {

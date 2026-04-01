@@ -26,6 +26,7 @@ const clearOpeningDialog = async (window: Page) => {
   const canvas = window.locator('canvas')
 
   await expect(app).toHaveAttribute('data-dialog-message', '*knock knock knock*', { timeout: 5000 })
+  await expect(app).toHaveAttribute('data-last-sfx-id', 'opening-knock')
   await canvas.click()
   await expect(app).toHaveAttribute(
     'data-dialog-message',
