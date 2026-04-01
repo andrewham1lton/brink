@@ -80,7 +80,7 @@ const BED_REVEAL_LINES = [
 ]
 const BED_REVEAL_DELAY = 0.6
 const TAIL_REACTION_LINE = 'What the heck is up with this tail...'
-const TAIL_REACTION_DELAY = 2.5
+const TAIL_REACTION_DELAY = 4.5
 const TAIL_REACTION_DISTANCE = 40
 const TAIL_REACTION_DURATION = 3.2
 
