@@ -66,7 +66,8 @@ const OPENING_LINES = [
   'Rise and shine, little one! Come meet me out in the garden when you\'re ready.',
 ]
 const BED_REVEAL_LINES = [
-  'Oh. I\'m a rat.',
+  'Oh.',
+  'I\'m a rat.',
   'Interesting.',
 ]
 const BED_REVEAL_DELAY = 0.6

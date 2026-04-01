@@ -136,7 +136,7 @@ test('leaving the bed triggers the rat reveal dialog sequence before movement re
     await expect(app).toHaveAttribute('data-dialog-message', '')
     await expect(app).toHaveAttribute('data-movement-locked', 'true')
 
-    await expect(app).toHaveAttribute('data-dialog-message', 'Oh. I\'m a rat.')
+    await expect(app).toHaveAttribute('data-dialog-message', 'Oh.')
 
     const frozen = await readPosition(window)
     await window.keyboard.down('a')
@@ -146,6 +146,9 @@ test('leaving the bed triggers the rat reveal dialog sequence before movement re
     const stillFrozen = await readPosition(window)
     expect(stillFrozen.x).toBeCloseTo(frozen.x, 1)
     expect(stillFrozen.y).toBeCloseTo(frozen.y, 1)
+
+    await canvas.click()
+    await expect(app).toHaveAttribute('data-dialog-message', 'I\'m a rat.')
 
     await canvas.click()
     await expect(app).toHaveAttribute('data-dialog-message', 'Interesting.')
@@ -183,6 +186,8 @@ test('left click can trigger the alarm clock interaction', async () => {
     await window.keyboard.down('a')
     await expect(app).toHaveAttribute('data-player-in-bed', 'false', { timeout: 3000 })
     await window.keyboard.up('a')
+    await canvas.click()
+    await expect(app).toHaveAttribute('data-dialog-message', 'I\'m a rat.')
     await canvas.click()
     await expect(app).toHaveAttribute('data-dialog-message', 'Interesting.')
     await canvas.click()
