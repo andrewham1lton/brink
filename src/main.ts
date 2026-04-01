@@ -211,6 +211,7 @@ canvas.addEventListener('pointerdown', (event) => {
     return
   }
 
+  event.preventDefault()
   advanceDialogOrInteract()
 })
 

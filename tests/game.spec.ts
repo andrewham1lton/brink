@@ -15,6 +15,12 @@ const readPosition = async (window: Page) => {
   return { x, y }
 }
 
+const pressFor = async (window: Page, key: string, durationMs: number) => {
+  await window.keyboard.down(key)
+  await window.waitForTimeout(durationMs)
+  await window.keyboard.up(key)
+}
+
 const clearOpeningDialog = async (window: Page) => {
   const app = window.locator('#app')
   const canvas = window.locator('canvas')
@@ -173,15 +179,27 @@ test('left click can trigger the alarm clock interaction', async () => {
     await canvas.click()
     await expect(app).toHaveAttribute('data-dialog-visible', 'false')
 
-    await window.keyboard.down('s')
-    await window.waitForTimeout(150)
-    await window.keyboard.up('s')
-    await window.keyboard.down('a')
-    await window.waitForTimeout(1800)
-    await window.keyboard.up('a')
-    await window.keyboard.down('s')
-    await window.waitForTimeout(100)
-    await window.keyboard.up('s')
+    let position = await readPosition(window)
+
+    for (let i = 0; i < 24 && position.x > 340; i++) {
+      await pressFor(window, 'a', 80)
+      position = await readPosition(window)
+    }
+
+    for (let i = 0; i < 12 && position.x < 320; i++) {
+      await pressFor(window, 'd', 50)
+      position = await readPosition(window)
+    }
+
+    for (let i = 0; i < 12 && position.y < 308; i++) {
+      await pressFor(window, 's', 50)
+      position = await readPosition(window)
+    }
+
+    expect(position.x).toBeGreaterThanOrEqual(216)
+    expect(position.x).toBeLessThanOrEqual(342)
+    expect(position.y).toBeGreaterThanOrEqual(308)
+    expect(position.y).toBeLessThanOrEqual(348)
 
     await canvas.click()
     await expect(app).toHaveAttribute('data-dialog-message', /This must be my alarm clock\./)
